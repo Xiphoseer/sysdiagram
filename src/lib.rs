@@ -30,6 +30,7 @@ const DSREF_SCHEMA_CONTENTS: &str = "/DSREF-SCHEMA-CONTENTS";
 // See: http://www.dejadejadeja.com/detech/ocxdb/
 // See: http://pitcheploy.free.fr/Microsoft%20Visual%20Basic%206.0%20%C3%89dition%20Professionnelle%20(Fran%C3%A7ais)/HKEY_LOCAL_MACHINE.txt
 // See: https://gist.githubusercontent.com/stevemk14ebr/af8053c506ef895cd520f8017a81f913/raw/98944bc6ae995229d5231568a8ae73dd287e8b4f/guids
+// See: https://gist.githubusercontent.com/hfiref0x/a77584e47b0feb3779f47c8d7609d4c4/raw/0cedbcaee37c072c623c71c2b2ac03ab020592da/responder_comdata.txt
 
 /// `SchGrid OLE Custom Control module` (`mdt2db.dll`)
 pub const CLSID_TYPELIB_SCHGRID: Uuid = uuid!("e9b0e6da-811c-11d0-ad51-00a0c90f5739");
@@ -48,8 +49,12 @@ pub const CLSID_MSDTDB_SQLSERVER_INDEX_PROPERTY_PAGE: Uuid =
 /// `SchGrid` aka `MSDTDDGridCtrl2 Object`
 pub const CLSID_SCHGRID: Uuid = uuid!("e9b0e6d9-811c-11d0-ad51-00a0c90f5739");
 
-pub const CLSID_ISCHGRID: Uuid = uuid!("91a88675-8bc8-11ce-9bfd-00aa0062bebf");
-pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("91A88676-8BC8-11CE-9BFD-00AA0062BEBF");
+pub const IID_ISCHGRID_ALT: Uuid = uuid!("91a88675-8bc8-11ce-9bfd-00aa0062bebf");
+pub const IID_DSCHGRID_EVENTS: Uuid = uuid!("91a88676-8bc8-11ce-9bfd-00aa0062bebf");
+pub const IID_CONTROL_EVENTS: Uuid = uuid!("77d2c934-7779-11d8-9070-00065b840d9c");
+
+pub const CLSID_ISCHGRID: Uuid = uuid!("b27d32a0-62d8-4295-8d98-273c25a2da2d");
+pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("847f3bf4-617f-43c7-8535-2986e1d552f8");
 /// Microsoft DT PolyLine Control 2 (aka `MSDTPolylineControl.2`)
 pub const CLSID_POLYLINE: Uuid = uuid!("d24d4453-1f01-11d1-8e63-006097d2df48");
 /// Microsoft DT Label Control (aka `MSDTDDSLabel`)
