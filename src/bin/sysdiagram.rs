@@ -21,6 +21,10 @@ struct Options {
     relationships: bool,
 
     #[argh(switch)]
+    /// print clsid table
+    classes: bool,
+
+    #[argh(switch)]
     /// print cfb streams
     streams: bool,
 
@@ -52,6 +56,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     let mut reader = SysDiagramFile::open(cursor).map_err(LoadError::Cfb)?;
 
     if opts.streams {
+        eprintln!("Root CLSID: {}", reader.root_entry().clsid());
         let entries = reader.read_root_storage();
 
         eprintln!("CFB Streams:");
@@ -59,6 +64,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
             println!("- {:?}: {}", entry.name(), entry.path().display());
         }
     }
+
+    let comp_obj = reader.root_comp_obj()?;
+    println!("{:?}", comp_obj);
 
     eprintln!("Parsing DSREF-SCHEMA-CONTENT");
     let dsref_schema_contents = reader.dsref_schema_contents()?;
@@ -78,7 +86,11 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         eprintln!("{:#?}", dsref_schema_contents);
     }
 
-    let (tables, relationships) = reader.schema_form()?;
+    let (form_control, tables, relationships) = reader.schema_form()?;
+    if opts.classes {
+        eprintln!("{:#?}", form_control.site_classes);
+    }
+
     if opts.tables {
         for table in tables {
             println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);

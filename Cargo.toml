@@ -5,7 +5,7 @@ authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
 repository = "https://github.com/xiphoseer/sysdiagram"
-description = "Library for files/resources for LU related software"
+description = "Parser for MSSQL Sysdiagrams"
 license = "MIT"
 readme = "README.md"
 
@@ -13,7 +13,7 @@ readme = "README.md"
 cli = ["dep:anyhow", "dep:mapr", "dep:argh"]
 
 [dependencies]
-ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "6f50acc"}
+ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "b99fbf9"}
 base64 = "0.21"
 cfb = "0.9"
 encoding = "0.2"
@@ -25,6 +25,7 @@ argh = { version = "0.1.9", optional = true }
 bitflags = "2.4.1"
 nom = "7"
 bstr = "1.7.0"
+uuid = "1.5.0"
 
 [[bin]]
 name = "sysdiagram"

@@ -212,7 +212,7 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 [[package]]
 name = "ms-oforms"
 version = "0.3.0-alpha2"
-source = "git+https://github.com/Xiphoseer/rust-ms-oforms.git?rev=6f50acc#6f50acc19f0725912d80375cdda9ab438b722ec6"
+source = "git+https://github.com/Xiphoseer/rust-ms-oforms.git?rev=b99fbf9#b99fbf9b7666d752689ddee121a9ed6e6ff7da63"
 dependencies = [
  "bitflags",
  "cfb",
@@ -220,6 +220,7 @@ dependencies = [
  "nom",
  "num-derive",
  "num-traits",
+ "uuid",
 ]
 
 [[package]]
@@ -363,6 +364,7 @@ dependencies = [
  "ms-oforms",
  "nom",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]

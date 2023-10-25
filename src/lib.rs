@@ -11,7 +11,10 @@ mod io;
 pub use io::*;
 mod parser;
 use ms_oforms::{
-    controls::{form::Site, ole_site_concrete::Clsid},
+    controls::{
+        form::{FormControl, Site},
+        ole_site_concrete::Clsid,
+    },
     OFormsFile,
 };
 use nom::error::VerboseError;
@@ -20,8 +23,14 @@ mod dsref;
 pub use dsref::*;
 mod connection_string;
 pub use connection_string::*;
+use uuid::{uuid, Uuid};
 
 const DSREF_SCHEMA_CONTENTS: &str = "/DSREF-SCHEMA-CONTENTS";
+
+// See: http://www.dejadejadeja.com/detech/ocxdb/guidintnames.txt
+pub const CLSID_SCHGRID: Uuid = uuid!("e9b0e6d9-811c-11d0-ad51-00a0c90f5739");
+pub const CLSID_POLYLINE: Uuid = uuid!("d24d4453-1f01-11d1-8e63-006097d2df48");
+pub const CLSID_DDSLABEL: Uuid = uuid!("d24d4451-1f01-11d1-8e63-006097d2df48");
 
 pub struct SysDiagramFile<T> {
     inner: OFormsFile<T>,
@@ -53,7 +62,9 @@ impl<T: Read + Seek> SysDiagramFile<T> {
         }
     }
 
-    pub fn schema_form(&mut self) -> Result<(Vec<Table>, Vec<Relationship>), LoadError> {
+    pub fn schema_form(
+        &mut self,
+    ) -> Result<(FormControl, Vec<Table>, Vec<Relationship>), LoadError> {
         eprintln!("Parsing FormControl");
         let form_control = self.root_form_control().map_err(LoadError::Cfb)?;
 
@@ -104,7 +115,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                     }
                 }
             }
-            Ok((tables, relationships))
+            Ok((form_control, tables, relationships))
         } else {
             Err(LoadError::MissingStream("o"))
         }
