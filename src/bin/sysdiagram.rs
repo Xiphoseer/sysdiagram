@@ -3,7 +3,7 @@ use mapr::Mmap;
 use std::fs::File;
 use std::io::Cursor;
 use std::path::PathBuf;
-use sysdiagram::{get_settings, SysDiagram, TryFromCfb};
+use sysdiagram::{get_settings, LoadError, SysDiagramFile};
 
 #[derive(argh::FromArgs)]
 /// parse a sysdiagram from a FDB file
@@ -21,6 +21,10 @@ struct Options {
     relationships: bool,
 
     #[argh(switch)]
+    /// print cfb streams
+    streams: bool,
+
+    #[argh(switch)]
     /// print settings
     settings: bool,
 
@@ -34,8 +38,6 @@ struct Options {
 }
 
 fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
-    println!("Loading tables... (this may take a while)");
-
     // Load the database file
     let file = File::open(&opts.file)
         .with_context(|| format!("Failed to open input file '{}'", opts.file.display()))?;
@@ -47,35 +49,49 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         unimplemented!("--base64 is unimplemented");
     }
 
-    let sysdiagram = SysDiagram::try_from_cfb(cursor)?;
-    if opts.tables {
-        for table in sysdiagram.tables {
-            println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
-            eprintln!("{:#?}", table.sch_grid);
+    let mut reader = SysDiagramFile::open(cursor).map_err(LoadError::Cfb)?;
+
+    if opts.streams {
+        let entries = reader.read_root_storage();
+
+        eprintln!("CFB Streams:");
+        for entry in entries {
+            println!("- {:?}: {}", entry.name(), entry.path().display());
         }
     }
-    if opts.relationships {
-        for relationship in sysdiagram.relationships {
-            println!(
-                "{:60} {:25} {:25}",
-                relationship.name, relationship.from, relationship.to
-            );
-        }
-    }
+
+    eprintln!("Parsing DSREF-SCHEMA-CONTENT");
+    let dsref_schema_contents = reader.dsref_schema_contents()?;
     if opts.settings {
-        if let Ok(settings) = get_settings(sysdiagram.dsref_schema_contents.connection.clone()) {
+        if let Ok(settings) = get_settings(dsref_schema_contents.connection.clone()) {
             for (key, value) in &settings {
                 println!("{:25}: {}", key, value);
             }
         } else {
             eprintln!(
                 "Failed to parse connection string:\n{}",
-                sysdiagram.dsref_schema_contents.connection
+                dsref_schema_contents.connection
             );
         }
     }
     if opts.dsref {
-        eprintln!("{:#?}", sysdiagram.dsref_schema_contents);
+        eprintln!("{:#?}", dsref_schema_contents);
+    }
+
+    let (tables, relationships) = reader.schema_form()?;
+    if opts.tables {
+        for table in tables {
+            println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
+            eprintln!("{:#?}", table.sch_grid);
+        }
+    }
+    if opts.relationships {
+        for relationship in relationships {
+            println!(
+                "{:60} {:25} {:25}",
+                relationship.name, relationship.from, relationship.to
+            );
+        }
     }
     Ok(())
 }

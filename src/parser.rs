@@ -2,6 +2,7 @@ use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
 use ms_oforms::properties::types::{parse_position, parse_size};
 use nom::bytes::complete::{tag, take, take_until};
 use nom::combinator::{map_res, recognize, verify};
+use nom::error::{FromExternalError, ParseError};
 use nom::multi::{count, length_value, many_till};
 use nom::number::complete::{le_u16, le_u32};
 use nom::sequence::pair;
@@ -26,7 +27,11 @@ fn le_u32_2(input: &[u8]) -> IResult<&[u8], (u32, u32)> {
     pair(le_u32, le_u32)(input)
 }
 
-pub(crate) fn parse_u32_bytes_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
+pub(crate) fn parse_u32_bytes_wstring_nt<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], String, E>
+where
+    E: ParseError<&'a [u8]>,
+    E: FromExternalError<&'a [u8], Cow<'static, str>>,
+{
     let (input, len) = le_u32(input)?;
     let (input, string) = map_res(take(len - 2), decode_utf16)(input)?;
     let (input, _) = tag([0x00, 0x00])(input)?;

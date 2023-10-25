@@ -1,22 +1,10 @@
 //! IO functions
-use crate::parse_dsref_schema_contents;
-
-use super::core::{Relationship, SysDiagram, Table};
-use super::parser;
-use std::convert::TryFrom;
-use std::io::Error as IoError;
-use std::io::{Cursor, Read, Seek};
-
-use base64::engine::general_purpose;
 use base64::DecodeError as Base64DecodeError;
-use cfb::CompoundFile;
 use displaydoc::Display;
-use ms_oforms::controls::form::parse_form_control;
-use ms_oforms::controls::form::Site;
-use ms_oforms::controls::ole_site_concrete::Clsid;
 use nom::error::{ErrorKind, VerboseError, VerboseErrorKind};
 use nom::InputLength;
 use std::borrow::Cow;
+use std::io::Error as IoError;
 use thiserror::Error;
 
 /// Error wrapper when loading a sysdiagram
@@ -35,7 +23,7 @@ pub enum LoadError {
     /// Buffer is too long
     BufTooLong(std::num::TryFromIntError),
     /// Missing a stream with the filename
-    MissingStream(String),
+    MissingStream(&'static str),
     /// Parsing incomplete
     Incomplete,
     /// Nom parsing error: {0:?} at -{1}
@@ -52,30 +40,6 @@ pub enum LoadError {
 
 /// Result when loading a sysdiagram
 pub type LoadResult<T> = Result<T, LoadError>;
-
-/// Try to load a sysdiagram from a base64 encoded cfb file
-impl TryFrom<&str> for SysDiagram {
-    type Error = LoadError;
-
-    fn try_from(string: &str) -> LoadResult<Self> {
-        println!("{}", string.len());
-        let mut cursor = Cursor::new(string.as_bytes());
-        let mut decoder = base64::read::DecoderReader::new(&mut cursor, &general_purpose::STANDARD);
-        let mut buf = Vec::with_capacity(string.len() / 4 * 3 + 3);
-        decoder.read_to_end(&mut buf)?; // TODO: impl Seek for DecoderRead?
-        Self::try_from_cfb(Cursor::new(buf))
-    }
-}
-
-/// Trait to load something from an OLE file
-pub trait TryFromCfb<T: Read + Seek>
-where
-    Self: Sized,
-{
-    type Error;
-
-    fn try_from_cfb(buf: T) -> Result<Self, Self::Error>;
-}
 
 impl<I: InputLength> From<nom::Err<nom::error::Error<I>>> for LoadError {
     fn from(e: nom::Err<nom::error::Error<I>>) -> LoadError {
@@ -112,104 +76,5 @@ impl<I: InputLength> From<nom::Err<VerboseError<I>>> for LoadError {
 impl From<Cow<'_, str>> for LoadError {
     fn from(e: Cow<'_, str>) -> Self {
         LoadError::StringEncoding(String::from(e))
-    }
-}
-
-/// Try to load a sysdiagram from an cfb file
-impl<T: Read + Seek> TryFromCfb<T> for SysDiagram {
-    type Error = LoadError;
-
-    fn try_from_cfb(buf: T) -> LoadResult<Self> {
-        let mut reader = CompoundFile::open(buf).map_err(LoadError::Cfb)?;
-        let entries = reader.read_root_storage();
-
-        eprintln!("CFB Streams:");
-        for entry in entries {
-            println!("- {:?}: {}", entry.name(), entry.path().display());
-        }
-
-        let form_control = if reader.is_stream("/f") {
-            let mut f_stream = reader.open_stream("/f").map_err(LoadError::Cfb)?;
-            let f_stream_len = usize::try_from(f_stream.len()).map_err(LoadError::StreamTooLong)?;
-            let mut bytes: Vec<u8> = Vec::with_capacity(f_stream_len);
-            f_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
-            let (_rest, form_control) =
-                parse_form_control::<VerboseError<&[u8]>>(&bytes[..]).map_err(LoadError::from)?;
-            Ok(form_control)
-        } else {
-            Err(LoadError::MissingStream("f".to_string()))
-        }?;
-
-        let dsref_schema_contents = if reader.is_stream("/DSREF-SCHEMA-CONTENTS") {
-            let mut r_stream = reader
-                .open_stream("/DSREF-SCHEMA-CONTENTS")
-                .map_err(LoadError::Cfb)?;
-            let r_stream_len = usize::try_from(r_stream.len()).map_err(LoadError::StreamTooLong)?;
-            let mut bytes: Vec<u8> = Vec::with_capacity(r_stream_len);
-            r_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
-            let (_, dsref_schema_contents) = parse_dsref_schema_contents(&bytes[..])?;
-            Ok(dsref_schema_contents)
-        } else {
-            Err(LoadError::MissingStream(
-                "DSREF-SCHEMA-CONTENTS".to_string(),
-            ))
-        }?;
-
-        let (tables, relationships) = if reader.is_stream("/o") {
-            let mut o_stream = reader.open_stream("/o").map_err(LoadError::Cfb)?;
-            let o_stream_len = usize::try_from(o_stream.len()).map_err(LoadError::StreamTooLong)?;
-            let mut bytes: Vec<u8> = Vec::with_capacity(o_stream_len);
-            o_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
-
-            let mut offset = 0;
-            let mut tables = Vec::new();
-            let mut relationships = Vec::new();
-            for site in &form_control.sites[..] {
-                match site {
-                    Site::Ole(ref ole_site) => {
-                        let site_len = usize::try_from(ole_site.object_stream_size)
-                            .map_err(LoadError::SiteTooLong)?;
-                        match ole_site.clsid_cache_index {
-                            Clsid::ClassTable(index) => {
-                                let caption = ole_site.control_tip_text.clone();
-                                let data = &bytes[offset..];
-                                if index == 0 {
-                                    // Table
-                                    let (_, sch_grid) = parser::parse_sch_grid(data)?;
-                                    tables.push(Table { sch_grid, caption });
-                                } else if index == 1 {
-                                    // Foreign Key
-                                    let (_, control) = parser::parse_control1(data)?;
-                                    let (_, (name, from, to)) =
-                                        parser::parse_relationship(&caption[..])?;
-                                    relationships.push(Relationship {
-                                        control,
-                                        caption,
-                                        name,
-                                        from,
-                                        to,
-                                    });
-                                } else if index == 2 {
-                                    // Control?
-                                    // TODO
-                                }
-                            }
-                            Clsid::Invalid => println!("Invalid Class"),
-                            Clsid::Global(index) => println!("GLOBAL {}", index),
-                        };
-                        offset += site_len;
-                    }
-                }
-            }
-            Ok((tables, relationships))
-        } else {
-            Err(LoadError::MissingStream("o".to_string()))
-        }?;
-
-        Ok(SysDiagram {
-            tables,
-            relationships,
-            dsref_schema_contents,
-        })
     }
 }

@@ -58,6 +58,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "327762f6e5a765692301e5bb513e0d9fef63be86bbc14528052b1cd3e6f03e07"
 
 [[package]]
+name = "bstr"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c79ad7fb2dd38f3dabd76b09c6a5a20c038fc0213ef1e9afd30eb777f120f019"
+dependencies = [
+ "memchr",
+ "regex-automata",
+ "serde",
+]
+
+[[package]]
 name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -201,9 +212,10 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 [[package]]
 name = "ms-oforms"
 version = "0.3.0-alpha2"
-source = "git+https://github.com/Xiphoseer/rust-ms-oforms.git?rev=3b60e04#3b60e0445de6086cb89c0d13185c0c2837b42c8a"
+source = "git+https://github.com/Xiphoseer/rust-ms-oforms.git?rev=6f50acc#6f50acc19f0725912d80375cdda9ab438b722ec6"
 dependencies = [
  "bitflags",
+ "cfb",
  "encoding_rs",
  "nom",
  "num-derive",
@@ -277,6 +289,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "regex-automata"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f804c7828047e88b2d32e2d7fe5a105da8ee3264f01902f796c8e067dc2483f"
+
+[[package]]
 name = "serde"
 version = "1.0.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -337,6 +355,7 @@ dependencies = [
  "argh",
  "base64",
  "bitflags",
+ "bstr",
  "cfb",
  "displaydoc",
  "encoding",

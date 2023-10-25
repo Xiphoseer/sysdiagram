@@ -1,8 +1,11 @@
+use std::borrow::Cow;
+
+use bstr::BString;
 use nom::{
     bytes::complete::take,
-    combinator::{map, map_opt},
-    multi::count,
-    number::complete::{le_u32, le_u8},
+    combinator::map_opt,
+    error::{FromExternalError, ParseError},
+    number::complete::le_u32,
     IResult,
 };
 
@@ -117,19 +120,20 @@ pub struct DSRefSchemaEntry {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct DSRefSchemaContents {
-    pub _a0: u32,
-    pub _a1: u32,
-    pub _d1: Vec<u8>,
-    pub _d2: Vec<u8>,
+    pub(crate) _d1: BString,
     pub connection: String,
-    pub(crate) ref_type: DsRefType,
+    pub ref_type: DsRefType,
     pub name: String,
     pub tables: Vec<DSRefSchemaEntry>,
-    pub(crate) _d4: Vec<u8>,
+    pub(crate) _d4: BString,
     pub guid: String,
 }
 
-fn parse_entry(input: &[u8]) -> IResult<&[u8], DSRefSchemaEntry> {
+fn parse_entry<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DSRefSchemaEntry, E>
+where
+    E: ParseError<&'a [u8]>,
+    E: FromExternalError<&'a [u8], Cow<'static, str>>,
+{
     let (input, ref_type) = map_opt(le_u32, DsRefType::from_bits)(input)?;
     let (input, table) = parse_u32_bytes_wstring_nt(input)?;
     let (input, schema) = parse_u32_bytes_wstring_nt(input)?;
@@ -143,30 +147,44 @@ fn parse_entry(input: &[u8]) -> IResult<&[u8], DSRefSchemaEntry> {
     ))
 }
 
-pub fn parse_dsref_schema_contents(input: &[u8]) -> IResult<&[u8], DSRefSchemaContents> {
-    let (input, _a0) = le_u32(input)?;
-    let (input, _a1) = le_u32(input)?;
-    let (input, _d1) = take(17usize)(input)?;
-    let (input, len) = map(le_u8, usize::from)(input)?;
-    let (input, _d2) = take(26usize)(input)?;
+pub fn parse_dsref_schema_contents<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DSRefSchemaContents, E>
+where
+    E: ParseError<&'a [u8]>,
+    E: FromExternalError<&'a [u8], Cow<'static, str>>,
+{
+    let (input, _d1) = take(52usize)(input)?;
     let (input, connection) = parse_u32_bytes_wstring_nt(input)?;
     let (input, ref_type) = map_opt(le_u32, DsRefType::from_bits)(input)?;
-    let (input, name) = parse_u32_bytes_wstring_nt(input)?;
-    let (input, tables) = count(parse_entry, len)(input)?;
+    let (input, name) = if ref_type.contains(DsRefType::HASNAME) {
+        parse_u32_bytes_wstring_nt(input)?
+    } else {
+        (input, String::new())
+    };
+    let (input, tables) = {
+        let mut tables = Vec::new();
+        let mut hasnext = ref_type.contains(DsRefType::HASFIRSTCHILD);
+        let mut _i = input;
+        while hasnext {
+            let (rest, entry) = parse_entry(_i)?;
+            hasnext = entry.ref_type.contains(DsRefType::HASNEXTSIBLING);
+            tables.push(entry);
+            _i = rest;
+        }
+        (_i, tables)
+    };
     let (input, _d4) = take(22usize)(input)?;
     let (input, guid) = parse_u32_bytes_wstring_nt(input)?;
     Ok((
         input,
         DSRefSchemaContents {
-            _a0,
-            _a1,
-            _d1: _d1.to_owned(),
-            _d2: _d2.to_owned(),
+            _d1: BString::from(_d1),
             connection,
             ref_type,
             name,
             tables,
-            _d4: _d4.to_owned(),
+            _d4: BString::from(_d4),
             guid,
         },
     ))
