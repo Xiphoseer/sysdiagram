@@ -27,10 +27,50 @@ use uuid::{uuid, Uuid};
 
 const DSREF_SCHEMA_CONTENTS: &str = "/DSREF-SCHEMA-CONTENTS";
 
-// See: http://www.dejadejadeja.com/detech/ocxdb/guidintnames.txt
+// See: http://www.dejadejadeja.com/detech/ocxdb/
+// See: http://pitcheploy.free.fr/Microsoft%20Visual%20Basic%206.0%20%C3%89dition%20Professionnelle%20(Fran%C3%A7ais)/HKEY_LOCAL_MACHINE.txt
+// See: https://gist.githubusercontent.com/stevemk14ebr/af8053c506ef895cd520f8017a81f913/raw/98944bc6ae995229d5231568a8ae73dd287e8b4f/guids
+
+/// `SchGrid OLE Custom Control module` (`mdt2db.dll`)
+pub const CLSID_TYPELIB_SCHGRID: Uuid = uuid!("e9b0e6da-811c-11d0-ad51-00a0c90f5739");
+
+/// Microsoft Data Tools Database Designer
+pub const CLSID_MSDTDB_DESIGNER: Uuid = uuid!("e9b0e6d4-811c-11d0-ad51-00a0c90f5739");
+/// Microsoft Data Tools Database Designer SQL Server Table Property Page
+pub const CLSID_MSDTDB_SQLSERVER_TABLE_PROPERTY_PAGE: Uuid =
+    uuid!("e9b0e6d5-811c-11d0-ad51-00a0c90f5739");
+/// Microsoft Data Tools Database Designer SQL Server Relationship Property Page
+pub const CLSID_MSDTDB_SQLSERVER_RELATIONSHIP_PROPERTY_PAGE: Uuid =
+    uuid!("e9b0e6d6-811c-11d0-ad51-00a0c90f5739");
+/// Microsoft Data Tools Database Designer SQL Server Index Property Page
+pub const CLSID_MSDTDB_SQLSERVER_INDEX_PROPERTY_PAGE: Uuid =
+    uuid!("e9b0e6d8-811c-11d0-ad51-00a0c90f5739");
+/// `SchGrid` aka `MSDTDDGridCtrl2 Object`
 pub const CLSID_SCHGRID: Uuid = uuid!("e9b0e6d9-811c-11d0-ad51-00a0c90f5739");
+
+pub const CLSID_ISCHGRID: Uuid = uuid!("91a88675-8bc8-11ce-9bfd-00aa0062bebf");
+pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("91A88676-8BC8-11CE-9BFD-00AA0062BEBF");
+/// Microsoft DT PolyLine Control 2 (aka `MSDTPolylineControl.2`)
 pub const CLSID_POLYLINE: Uuid = uuid!("d24d4453-1f01-11d1-8e63-006097d2df48");
+/// Microsoft DT Label Control (aka `MSDTDDSLabel`)
 pub const CLSID_DDSLABEL: Uuid = uuid!("d24d4451-1f01-11d1-8e63-006097d2df48");
+/// Microsoft DT Diagram Surface 2 (aka `MSDTDDS`)
+pub const CLSID_MSDTDDS: Uuid = uuid!("b0406340-b0c5-11d0-89a9-00a0c9054129");
+/// Microsoft DT DDS TypeLib 2 (`mdt2dd.dll`)
+pub const CLSID_TYPELIB_DTDDS2: Uuid = uuid!("b0406341-b0c5-11d0-89a9-00a0c9054129");
+/// Microsoft DT Typelib
+pub const CLSID_TYPELIB_MSDT: Uuid = uuid!("a92cc3f0-e7c4-11ce-a47b-00aa005119fb");
+/// Microsoft Data Tools DSRef Object (aka `DSRefObject2.Simple`, from `mdt2fref.dll`)
+pub const CLSID_DSREF_R2: Uuid = uuid!("e9b0e6db-811c-11d0-ad51-00a0c90f5739");
+
+/// Microsoft DT DDS Form 2.0 (aka `MDTDF.Form.1`)
+pub const CLSID_MSDT_DDS_FORM_2: Uuid = uuid!("105b80d2-95f1-11d0-b0a0-00aa00bdcb5c");
+
+/// Microsoft DT DDSForm (`mdt2df.dll`)
+pub const TYPELIB_DDS_FORM: Uuid = uuid!("105b80d0-95f1-11d0-b0a0-00aa00bdcb5c");
+
+/// Microsoft DT DDSform 2.1 FormPackage
+pub const CLSID_DDS2_FORM_PACKAGE: Uuid = uuid!("105b80d5-95f1-11d0-b0a0-00aa00bdcb5c");
 
 pub struct SysDiagramFile<T> {
     inner: OFormsFile<T>,

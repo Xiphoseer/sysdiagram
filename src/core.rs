@@ -4,6 +4,7 @@ use ms_oforms::properties::types::{Position, Size};
 
 use crate::DSRefSchemaContents;
 
+/// See: <http://www.dejadejadeja.com/detech/ocxdb/mdt2db.dll.txt.lisp>
 #[derive(Debug)]
 pub struct SchGrid {
     pub d1: u32,

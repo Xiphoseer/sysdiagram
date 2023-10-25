@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
-use bstr::BString;
+use ms_oforms::common::parse_guid;
 use nom::{
-    bytes::complete::take,
     combinator::map_opt,
     error::{FromExternalError, ParseError},
-    number::complete::le_u32,
+    number::complete::{le_u16, le_u32},
     IResult,
 };
+use uuid::Uuid;
 
 use crate::parse_u32_bytes_wstring_nt;
 
@@ -120,12 +120,18 @@ pub struct DSRefSchemaEntry {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct DSRefSchemaContents {
-    pub(crate) _d1: BString,
+    pub clsid: Uuid,
+    pub(crate) len: usize,
+    pub(crate) a: Uuid, // probably not actually a UUID
+    pub root_ref: DsRefType,
+    pub(crate) _d1: Uuid, // NIL UUID
     pub connection: String,
     pub ref_type: DsRefType,
     pub name: String,
     pub tables: Vec<DSRefSchemaEntry>,
-    pub(crate) _d4: BString,
+    pub(crate) c: u32,
+    pub(crate) c2: Uuid,
+    pub(crate) c3: u16, // could be tagVARENUM? 0x0008 is BSTR
     pub guid: String,
 }
 
@@ -154,7 +160,11 @@ where
     E: ParseError<&'a [u8]>,
     E: FromExternalError<&'a [u8], Cow<'static, str>>,
 {
-    let (input, _d1) = take(52usize)(input)?;
+    let (input, clsid) = parse_guid(input)?;
+    let len = input.len();
+    let (input, a) = parse_guid(input)?;
+    let (input, root_ref) = map_opt(le_u32, DsRefType::from_bits)(input)?;
+    let (input, _d1) = parse_guid(input)?;
     let (input, connection) = parse_u32_bytes_wstring_nt(input)?;
     let (input, ref_type) = map_opt(le_u32, DsRefType::from_bits)(input)?;
     let (input, name) = if ref_type.contains(DsRefType::HASNAME) {
@@ -174,17 +184,25 @@ where
         }
         (_i, tables)
     };
-    let (input, _d4) = take(22usize)(input)?;
+    let (input, c) = le_u32(input)?;
+    let (input, c2) = parse_guid(input)?;
+    let (input, c3) = le_u16(input)?;
     let (input, guid) = parse_u32_bytes_wstring_nt(input)?;
     Ok((
         input,
         DSRefSchemaContents {
-            _d1: BString::from(_d1),
+            clsid,
+            len,
+            a,
+            root_ref,
+            _d1,
             connection,
             ref_type,
             name,
             tables,
-            _d4: BString::from(_d4),
+            c,
+            c2, // b30985d6-6bbb-45f2-9ab8-371664f03270 ?
+            c3, //
             guid,
         },
     ))
