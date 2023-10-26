@@ -123,42 +123,48 @@ impl<T: Read + Seek> SysDiagramFile<T> {
             let mut offset = 0;
             let mut tables = Vec::new();
             let mut relationships = Vec::new();
-            for site in &form_control.sites[..] {
-                match site {
-                    Site::Ole(ref ole_site) => {
-                        let site_len = usize::try_from(ole_site.object_stream_size)
-                            .map_err(LoadError::SiteTooLong)?;
-                        match ole_site.clsid_cache_index {
-                            Clsid::ClassTable(index) => {
-                                let caption = ole_site.control_tip_text.clone();
-                                let data = &bytes[offset..];
-                                if index == 0 {
-                                    // Table
-                                    let (_, sch_grid) = parser::parse_sch_grid(data)?;
-                                    tables.push(Table { sch_grid, caption });
-                                } else if index == 1 {
-                                    // Foreign Key
-                                    let (_, control) = parser::parse_control1(data)?;
-                                    let (_, (name, from, to)) =
-                                        parser::parse_relationship(&caption[..])?;
-                                    relationships.push(Relationship {
-                                        control,
-                                        caption,
-                                        name,
-                                        from,
-                                        to,
-                                    });
-                                } else if index == 2 {
-                                    // Control?
-                                    // TODO
-                                }
-                            }
-                            Clsid::Invalid => println!("Invalid Class"),
-                            Clsid::Global(index) => println!("GLOBAL {}", index),
-                        };
-                        offset += site_len;
+            for (i, site) in form_control.sites.iter().enumerate() {
+                let Site::Ole(ole_site) = site;
+                let site_len = ole_site.object_stream_size as usize;
+                let caption = ole_site.control_tip_text.clone();
+                let data = &bytes[offset..];
+                let clsid = match ole_site.clsid_cache_index {
+                    Clsid::ClassTable(index) => {
+                        form_control
+                            .site_classes
+                            .get(index as usize)
+                            .expect("invalid clsid index")
+                            .cls_id
                     }
+                    Clsid::Invalid => unimplemented!("Invalid Class"),
+                    Clsid::Global(index) => unimplemented!("GLOBAL {}", index),
+                };
+                println!("{:>3} {}: {}", i, clsid, caption);
+                match clsid {
+                    CLSID_SCHGRID => {
+                        // Table
+                        let (_, sch_grid) = parser::parse_sch_grid(data)?;
+                        tables.push(Table { sch_grid, caption });
+                    }
+                    CLSID_POLYLINE => {
+                        // Foreign Key
+                        let (_, control) = parser::parse_polyline(data)?;
+                        let (_, (name, from, to)) = parser::parse_relationship(&caption[..])?;
+                        relationships.push(Relationship {
+                            control,
+                            caption,
+                            name,
+                            from,
+                            to,
+                        });
+                    }
+                    CLSID_DDSLABEL => {
+                        // Control?
+                        // TODO
+                    }
+                    _ => eprintln!("Unknown clsid: {}", clsid),
                 }
+                offset += site_len;
             }
             Ok((form_control, tables, relationships))
         } else {

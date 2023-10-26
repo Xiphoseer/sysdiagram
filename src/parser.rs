@@ -10,7 +10,7 @@ use nom::IResult;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
-use crate::{Control1, SchGrid};
+use crate::{Polyline, SchGrid, SchGridInner};
 
 fn parse_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
     map_res(
@@ -55,7 +55,7 @@ pub fn parse_relationship(input: &str) -> IResult<&str, (String, String, String)
     Ok((input, (name.to_string(), from.to_string(), to.to_string())))
 }
 
-pub fn parse_control1(input: &[u8]) -> IResult<&[u8], Control1> {
+pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, pos_count) = le_u16(input)?;
     let (input, d1) = le_u16(input)?;
     let (input, positions) = count(parse_position, usize::from(pos_count))(input)?;
@@ -70,7 +70,7 @@ pub fn parse_control1(input: &[u8]) -> IResult<&[u8], Control1> {
     let (input, d9) = le_u32(input)?;
     Ok((
         input,
-        Control1 {
+        Polyline {
             positions,
             pos,
             d1,
@@ -84,8 +84,16 @@ pub fn parse_control1(input: &[u8]) -> IResult<&[u8], Control1> {
     ))
 }
 
+fn parse_sch_grid_inner(input: &[u8]) -> IResult<&[u8], SchGridInner> {
+    let (input, v) = count(le_u32, 11)(input)?;
+    Ok((input, SchGridInner(v)))
+}
+
+// See: <https://github.com/jandubois/win32-ole/blob/27570c90dcb3cf56ef815f668cc346dc0ac099a3/OLE.xs#L151>
+const WINOLE_MAGIC: u32 = 0x1234_4321;
+
 pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
-    let (input, d1) = verify(le_u32, |x| *x == 0x1234_4321)(input)?;
+    let (input, d1) = verify(le_u32, |x| *x == WINOLE_MAGIC)(input)?;
     let (input, d2) = le_u32(input)?;
     let (input, size1) = parse_size(input)?;
     let (input, d3) = verify(le_u32, |x| *x == 0x1234_5678)(input)?;
@@ -95,16 +103,20 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
     let (input, d5_2) = le_u32_2(input)?;
     let (input, d5_3) = le_u32_2(input)?;
     let (input, d6) = le_u32(input)?;
-    let (input, _d7) = take(16usize * 4)(input)?;
+    let (input, _d7) = count(le_u32, 16usize)(input)?;
     let (input, size2) = parse_size(input)?;
-    let (input, _d8) = take(16usize * 4)(input)?;
-    let (input, d9) = le_u32(input)?;
-    let (input, _d10) = take(16usize * 4)(input)?;
-    let (input, _d11) = take(11usize * 4)(input)?;
-    let (input, d12) = le_u32(input)?;
-    let (input, d13) = le_u32_2(input)?;
-    let (input, some_len) = map_res(le_u32, usize::try_from)(input)?;
-    let (input, d14) = count(le_u32, some_len)(input)?;
+    let (input, d8_0) = le_u32(input)?;
+    let (input, col_count) = le_u32(input)?;
+    let (input, cols_shown) = le_u32(input)?;
+    let (input, x1) = count(parse_sch_grid_inner, 4)(input)?;
+    //let (input, _d8) = count(le_u32, 13usize)(input)?;
+    //let (input, d9) = le_u32(input)?;
+    //let (input, _d10) = count(le_u32, 8usize)(input)?;
+    //let (input, _d11) = take(8usize * 4)(input)?;
+    //let (input, d12) = le_u32(input)?;
+    //let (input, d13) = le_u32_2(input)?;
+    let (input, d14_len) = map_res(le_u32, usize::try_from)(input)?;
+    let (input, d14) = count(le_u32, d14_len)(input)?;
     let (input, schema) = parse_u32_wstring_nt(input)?;
     let (input, table) = parse_u32_wstring_nt(input)?;
     Ok((
@@ -120,11 +132,19 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
             d5_2,
             d5_3,
             d6,
-            /*d7, d8,*/ d9,
-            /*d10, d11,*/ d12,
-            d13,
-            d14,
+            d7: _d7,
             size2,
+            d8_0,
+            col_count,
+            cols_shown,
+            x1,
+            //d8: _d8,
+            //d9,
+            //d10: _d10,
+            //d11: BString::from(_d11),
+            //d12,
+            //d13,
+            d14,
             schema,
             table,
         },

@@ -88,13 +88,13 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
 
     let (form_control, tables, relationships) = reader.schema_form()?;
     if opts.classes {
-        eprintln!("{:#?}", form_control.site_classes);
+        eprintln!("{:?}", form_control.site_classes);
     }
 
     if opts.tables {
         for table in tables {
             println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
-            eprintln!("{:#?}", table.sch_grid);
+            eprintln!("{:?}", table.sch_grid);
         }
     }
     if opts.relationships {

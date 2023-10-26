@@ -6,32 +6,41 @@ use crate::DSRefSchemaContents;
 
 /// See: <http://www.dejadejadeja.com/detech/ocxdb/mdt2db.dll.txt.lisp>
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct SchGrid {
-    pub d1: u32,
-    pub d2: u32,
+    pub(crate) d1: u32,
+    pub(crate) d2: u32,
     pub size1: Size,
-    pub d3: u32,
-    pub d4: u32,
+    pub(crate) d3: u32,
+    pub(crate) d4: u32,
     pub name: String,
-    pub d5_1: (u32, u32),
-    pub d5_2: (u32, u32), // pos/size?
-    pub d5_3: (u32, u32),
-    pub d6: u32,
-    //pub d7: [u32;16],
-    //pub d8: [u32;16],
-    pub d9: u32,
-    //pub d10: [u32;16],
-    //pub d11: [u32;11],
-    pub d12: u32,
-    pub d13: (u32, u32), // border width? 1,1
-    pub d14: Vec<u32>,   // 0 - 10
-    pub size2: Size,
+    pub(crate) d5_1: (u32, u32),
+    pub(crate) d5_2: (u32, u32), // pos/size?
+    pub(crate) d5_3: (u32, u32),
+    pub(crate) d6: u32,
+    pub(crate) d7: Vec<u32>,
+    pub(crate) size2: Size,
+    pub(crate) d8_0: u32,
+    pub col_count: u32,
+    pub cols_shown: u32, // mostly min(col_count, 12)
+    //pub(crate) d8: Vec<u32>,
+    //pub(crate) d9: u32,
+    pub(crate) x1: Vec<SchGridInner>,
+    //pub(crate) d10: Vec<u32>,
+    //pub(crate) d11: BString,
+    //pub(crate) d12: u32,
+    //pub(crate) d13: (u32, u32), // border width? 1,1
+    pub(crate) d14: Vec<u32>, // 0 - 10, selected columns?
     pub table: String,
     pub schema: String,
 }
 
 #[derive(Debug)]
-pub struct Control1 {
+#[allow(dead_code)]
+pub(crate) struct SchGridInner(pub(crate) Vec<u32>);
+
+#[derive(Debug)]
+pub struct Polyline {
     pub positions: Vec<Position>,
     pub pos: Position,
     pub d1: u16,
@@ -53,7 +62,7 @@ pub struct Table {
 
 #[derive(Debug)]
 pub struct Relationship {
-    pub control: Control1,
+    pub control: Polyline,
     pub caption: String,
     pub from: String,
     pub to: String,
