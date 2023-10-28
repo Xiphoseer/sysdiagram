@@ -1,5 +1,5 @@
 use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
-use ms_oforms::properties::types::{parse_position, parse_size};
+use ms_oforms::properties::{parse_position, parse_size};
 use nom::bytes::complete::{tag, take, take_until};
 use nom::combinator::{map_res, recognize, verify};
 use nom::error::{FromExternalError, ParseError};

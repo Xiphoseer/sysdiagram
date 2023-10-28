@@ -112,6 +112,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
     ) -> Result<(FormControl, Vec<Table>, Vec<Relationship>), LoadError> {
         eprintln!("Parsing FormControl");
         let form_control = self.root_form_control().map_err(LoadError::Cfb)?;
+        println!("{:?}", form_control.displayed_size);
 
         eprintln!("Parsing Objects");
         if self.is_stream("/o") {
@@ -139,7 +140,8 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                     Clsid::Invalid => unimplemented!("Invalid Class"),
                     Clsid::Global(index) => unimplemented!("GLOBAL {}", index),
                 };
-                println!("{:>3} {}: {}", i, clsid, caption);
+                println!("{:>3} {}: {} ", i, clsid, caption);
+                println!("{:?}", ole_site.site_position);
                 match clsid {
                     CLSID_SCHGRID => {
                         // Table

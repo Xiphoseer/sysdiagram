@@ -1,5 +1,10 @@
 # sysdiagram
 
+## Relevant Docs
+
+- <https://learn.microsoft.com/en-us/openspecs/office_file_formats/ms-oforms/9c79701a-8c3e-4429-a139-b60ac3a1d50a>
+- <https://learn.microsoft.com/en-us/openspecs/sql_server_protocols/ms-ssas/44b6ec5d-5dbe-4053-93bf-87d3612a1445>
+
 ## UUIDs
 
 - `{77D2C902-7779-11D8-9070-00065B840D9C}`,CLSID Microsoft DDS Generic Class 80
