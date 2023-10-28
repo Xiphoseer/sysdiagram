@@ -10,13 +10,7 @@ use std::{
 mod io;
 pub use io::*;
 mod parser;
-use ms_oforms::{
-    controls::{
-        form::{FormControl, Site},
-        ole_site_concrete::Clsid,
-    },
-    OFormsFile,
-};
+use ms_oforms::{controls::form::FormControl, OFormsFile};
 use nom::error::VerboseError;
 pub use parser::*;
 mod dsref;
@@ -81,6 +75,8 @@ pub struct SysDiagramFile<T> {
     inner: OFormsFile<T>,
 }
 
+type SchemaForm = (FormControl, Vec<Table>, Vec<Relationship>, Vec<Label>);
+
 impl<T: Read + Seek> SysDiagramFile<T> {
     pub fn open(inner: T) -> std::io::Result<Self> {
         let inner = OFormsFile::open(inner)?;
@@ -107,39 +103,33 @@ impl<T: Read + Seek> SysDiagramFile<T> {
         }
     }
 
-    pub fn schema_form(
-        &mut self,
-    ) -> Result<(FormControl, Vec<Table>, Vec<Relationship>), LoadError> {
+    pub fn schema_form(&mut self) -> Result<SchemaForm, LoadError> {
         eprintln!("Parsing FormControl");
         let form_control = self.root_form_control().map_err(LoadError::Cfb)?;
         println!("{:?}", form_control.displayed_size);
 
         eprintln!("Parsing Objects");
         if self.is_stream("/o") {
-            let mut o_stream = self.root_object_stream().map_err(LoadError::Cfb)?;
-            let o_stream_len = usize::try_from(o_stream.len()).map_err(LoadError::StreamTooLong)?;
-            let mut bytes: Vec<u8> = Vec::with_capacity(o_stream_len);
-            o_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
+            let mut form = self.root_form().map_err(LoadError::Cfb)?;
+            let mut iter = form.site_iter();
 
-            let mut offset = 0;
             let mut tables = Vec::new();
             let mut relationships = Vec::new();
-            for (i, site) in form_control.sites.iter().enumerate() {
-                let Site::Ole(ole_site) = site;
+            let mut labels = Vec::new();
+
+            let mut buf = Vec::<u8>::new();
+            let mut i = 0;
+            while let Some((clsid, ole_site)) = iter.next() {
                 let site_len = ole_site.object_stream_size as usize;
+                println!("len: {}", site_len);
                 let caption = ole_site.control_tip_text.clone();
-                let data = &bytes[offset..];
-                let clsid = match ole_site.clsid_cache_index {
-                    Clsid::ClassTable(index) => {
-                        form_control
-                            .site_classes
-                            .get(index as usize)
-                            .expect("invalid clsid index")
-                            .cls_id
-                    }
-                    Clsid::Invalid => unimplemented!("Invalid Class"),
-                    Clsid::Global(index) => unimplemented!("GLOBAL {}", index),
-                };
+
+                buf.truncate(0); // reset len, keep capacity
+                buf.reserve(site_len);
+                let mut s = iter.site_stream().map_err(LoadError::Cfb)?;
+                s.read_to_end(&mut buf)?;
+                let data = &buf[..];
+
                 println!("{:>3} {}: {} ", i, clsid, caption);
                 println!("{:?}", ole_site.site_position);
                 match clsid {
@@ -161,14 +151,15 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                         });
                     }
                     CLSID_DDSLABEL => {
-                        // Control?
-                        // TODO
+                        let (_, label) = parser::parse_label::<nom::error::Error<_>>(data)?;
+                        labels.push(label);
                     }
                     _ => eprintln!("Unknown clsid: {}", clsid),
                 }
-                offset += site_len;
+
+                i += 1;
             }
-            Ok((form_control, tables, relationships))
+            Ok((form_control, tables, relationships, labels))
         } else {
             Err(LoadError::MissingStream("o"))
         }

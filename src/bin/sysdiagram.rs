@@ -39,6 +39,10 @@ struct Options {
     #[argh(switch)]
     /// print tables
     tables: bool,
+
+    #[argh(switch)]
+    /// print label
+    labels: bool,
 }
 
 fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
@@ -86,9 +90,15 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         eprintln!("{:#?}", dsref_schema_contents);
     }
 
-    let (form_control, tables, relationships) = reader.schema_form()?;
+    let (form_control, tables, relationships, labels) = reader.schema_form()?;
     if opts.classes {
         eprintln!("{:?}", form_control.site_classes);
+    }
+
+    if opts.labels {
+        for label in labels {
+            println!("{:?}", label);
+        }
     }
 
     if opts.tables {

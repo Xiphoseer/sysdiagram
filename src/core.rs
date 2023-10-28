@@ -1,6 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 //! # Data definitions for sysdiagrams
-use ms_oforms::properties::{Position, Size};
+use bstr::BString;
+use ms_oforms::properties::{font::StdFont, Position, Size};
 
 use crate::DSRefSchemaContents;
 
@@ -41,17 +42,32 @@ pub(crate) struct SchGridInner(pub(crate) Vec<u32>);
 
 #[derive(Debug)]
 pub struct Polyline {
-    pub positions: Vec<Position>,
-    pub pos: Position,
     pub d1: u16,
+    pub positions: Vec<Position>,
+    //pub pos: Position,
     //pub d2: [u8; 32],
-    pub d3: u32,
-    pub d4: u32,
-    pub d5: u32,
-    pub d6: u32,
-    pub d7: u32,
+    //pub d3: u32,
+    //pub d4: u32,
+    //pub d5: u32,
+    //pub d6: u32,
+    //pub d7: u32,
     //pub d8: [u8; 6],
-    pub d9: u32,
+    //pub d9: u32,
+    pub(crate) _rest: BString,
+}
+
+#[derive(Debug)]
+pub struct Label {
+    pub(crate) _d1: u32,
+    pub(crate) _d2: u32,
+    pub(crate) _d3: u32,
+    pub(crate) _b1: u8,
+    pub(crate) _d4: i32,
+    pub(crate) _d5: i32,
+    pub(crate) _d6: i32,
+    pub(crate) _x1: BString,
+    pub font: StdFont,
+    pub text: String,
 }
 
 #[derive(Debug)]

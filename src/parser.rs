@@ -1,16 +1,18 @@
+use bstr::BString;
 use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
+use ms_oforms::properties::font::parse_std_font;
 use ms_oforms::properties::{parse_position, parse_size};
 use nom::bytes::complete::{tag, take, take_until};
-use nom::combinator::{map_res, recognize, verify};
+use nom::combinator::{map, map_res, recognize, rest, verify};
 use nom::error::{FromExternalError, ParseError};
 use nom::multi::{count, length_value, many_till};
-use nom::number::complete::{le_u16, le_u32};
+use nom::number::complete::{le_i32, le_u16, le_u32, le_u8};
 use nom::sequence::pair;
 use nom::IResult;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
-use crate::{Polyline, SchGrid, SchGridInner};
+use crate::{Label, Polyline, SchGrid, SchGridInner};
 
 fn parse_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
     map_res(
@@ -45,6 +47,15 @@ pub(crate) fn parse_u32_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
     Ok((input, string))
 }
 
+pub(crate) fn parse_u16_wstring<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], String, E>
+where
+    E: ParseError<&'a [u8]>,
+    E: FromExternalError<&'a [u8], Cow<'static, str>>,
+{
+    let (input, len) = le_u16(input)?;
+    map_res(take((len as usize) << 1), decode_utf16)(input)
+}
+
 pub fn parse_relationship(input: &str) -> IResult<&str, (String, String, String)> {
     let (input, _) = tag("Relationship '")(input)?;
     let (input, name) = take_until("'")(input)?;
@@ -55,11 +66,46 @@ pub fn parse_relationship(input: &str) -> IResult<&str, (String, String, String)
     Ok((input, (name.to_string(), from.to_string(), to.to_string())))
 }
 
+pub fn parse_label<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Label, E>
+where
+    E: ParseError<&'a [u8]>,
+    E: FromExternalError<&'a [u8], Cow<'static, str>>,
+{
+    let (input, _d1) = le_u32(input)?;
+    let (input, _d2) = le_u32(input)?;
+    let (input, _d3) = le_u32(input)?;
+
+    let (input, _b1) = le_u8(input)?;
+
+    let (input, _d4) = le_i32(input)?;
+    let (input, _d5) = le_i32(input)?;
+    let (input, _d6) = le_i32(input)?;
+
+    let (input, _x1) = map(take(7usize), BString::from)(input)?;
+    let (input, font) = parse_std_font(input)?;
+    let (input, text) = parse_u16_wstring(input)?;
+    Ok((
+        input,
+        Label {
+            _d1,
+            _d2,
+            _d3,
+            _b1,
+            _d4,
+            _d5,
+            _d6,
+            _x1,
+            font,
+            text,
+        },
+    ))
+}
+
 pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, pos_count) = le_u16(input)?;
     let (input, d1) = le_u16(input)?;
     let (input, positions) = count(parse_position, usize::from(pos_count))(input)?;
-    let (input, _d2) = take(32usize)(input)?;
+    /*let (input, _d2) = take(32usize)(input)?;
     let (input, d3) = le_u32(input)?;
     let (input, d4) = le_u32(input)?;
     let (input, pos) = parse_position(input)?;
@@ -67,19 +113,21 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, d6) = le_u32(input)?;
     let (input, d7) = le_u32(input)?;
     let (input, _d8) = take(6usize)(input)?;
-    let (input, d9) = le_u32(input)?;
+    let (input, d9) = le_u32(input)?;*/
+    let (input, _rest) = map(rest, BString::from)(input)?;
     Ok((
         input,
         Polyline {
-            positions,
-            pos,
+            //pos,
             d1,
-            /*d2,*/ d3,
+            positions,
+            /*d2, d3,
             d4,
             d5,
             d6,
             d7,
-            /*d8,*/ d9,
+            d8, d9,*/
+            _rest,
         },
     ))
 }
