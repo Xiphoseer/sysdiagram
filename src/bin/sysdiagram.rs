@@ -75,14 +75,14 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     eprintln!("Parsing DSREF-SCHEMA-CONTENT");
     let dsref_schema_contents = reader.dsref_schema_contents()?;
     if opts.settings {
-        if let Ok(settings) = get_settings(dsref_schema_contents.connection.clone()) {
+        if let Ok(settings) = get_settings(dsref_schema_contents.root_node.name.as_ref().unwrap()) {
             for (key, value) in &settings {
                 println!("{:25}: {}", key, value);
             }
         } else {
             eprintln!(
-                "Failed to parse connection string:\n{}",
-                dsref_schema_contents.connection
+                "Failed to parse connection string:\n{:?}",
+                dsref_schema_contents.root_node.name
             );
         }
     }
@@ -92,7 +92,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
 
     let (form_control, tables, relationships, labels) = reader.schema_form()?;
     if opts.classes {
-        eprintln!("{:?}", form_control.site_classes);
+        for c in form_control.site_classes {
+            eprintln!("- {:?}", c);
+        }
     }
 
     if opts.labels {
@@ -113,6 +115,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                 "{:60} {:25} {:25}",
                 relationship.name, relationship.from, relationship.to
             );
+            println!("{:?}", relationship.control);
         }
     }
     Ok(())

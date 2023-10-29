@@ -55,8 +55,8 @@ pub struct SettingsError;
 impl std::error::Error for SettingsError {}
 
 /// See <https://learn.microsoft.com/en-us/openspecs/sql_server_protocols/ms-oledbstr/774039da-09c1-4b24-b53b-8f9ae019830c>
-pub fn get_settings(val: String) -> Result<StringMap, SettingsError> {
-    parse_connection_string(val.as_str())
+pub fn get_settings(val: &str) -> Result<StringMap, SettingsError> {
+    parse_connection_string(val)
         .map(|y| y.1)
         .map_err(|_| SettingsError)
 }

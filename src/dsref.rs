@@ -1,9 +1,9 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::BTreeMap};
 
-use ms_oforms::common::parse_guid;
+use ms_oforms::common::{parse_guid, VarType};
 use nom::{
-    combinator::map_opt,
-    error::{FromExternalError, ParseError},
+    combinator::{cond, map, map_opt},
+    error::{ContextError, FromExternalError, ParseError},
     number::complete::{le_u16, le_u32},
     IResult,
 };
@@ -111,10 +111,13 @@ bitflags::bitflags! {
 }
 
 #[derive(Debug, Clone)]
-pub struct DSRefSchemaEntry {
-    pub ref_type: DsRefType,
-    pub table: String,
-    pub schema: String,
+pub struct DsRefNode {
+    pub flags: DsRefType,
+    pub extended_type: Option<Uuid>,
+    pub name: Option<String>,
+    pub owner: Option<String>,
+    pub children: Vec<DsRefNode>,
+    pub properties: Option<BTreeMap<Uuid, Variant>>,
 }
 
 #[derive(Debug)]
@@ -123,32 +126,77 @@ pub struct DSRefSchemaContents {
     pub clsid: Uuid,
     pub(crate) len: usize,
     pub(crate) a: Uuid, // probably not actually a UUID
-    pub root_ref: DsRefType,
-    pub(crate) _d1: Uuid, // NIL UUID
-    pub connection: String,
-    pub ref_type: DsRefType,
-    pub name: String,
-    pub tables: Vec<DSRefSchemaEntry>,
-    pub(crate) c: u32,
-    pub(crate) c2: Uuid,
-    pub(crate) c3: u16, // could be tagVARENUM? 0x0008 is BSTR
-    pub guid: String,
+    pub root_node: DsRefNode,
 }
 
-fn parse_entry<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DSRefSchemaEntry, E>
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub enum Variant {
+    BStr(String),
+}
+
+fn parse_dsref_properties<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], BTreeMap<Uuid, Variant>, E>
 where
     E: ParseError<&'a [u8]>,
+    E: ContextError<&'a [u8]>,
     E: FromExternalError<&'a [u8], Cow<'static, str>>,
 {
-    let (input, ref_type) = map_opt(le_u32, DsRefType::from_bits)(input)?;
-    let (input, table) = parse_u32_bytes_wstring_nt(input)?;
-    let (input, schema) = parse_u32_bytes_wstring_nt(input)?;
+    let (input, prop_count) = le_u32(input)?;
+    let mut _i = input;
+    let mut prop_map = BTreeMap::new();
+    for _index in 0..prop_count {
+        let input = _i;
+        let (input, property) = parse_guid(input)?;
+        let (input, vt) = map_opt(le_u16, VarType::from_bits)(input)?;
+        let (input, value) = match vt {
+            VarType::BSTR => map(parse_u32_bytes_wstring_nt, Variant::BStr)(input),
+            _ => todo!(),
+        }?;
+        prop_map.insert(property, value);
+        _i = input;
+    }
+    Ok((_i, prop_map))
+}
+
+pub fn parse_dsref_node<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DsRefNode, E>
+where
+    E: ParseError<&'a [u8]>,
+    E: ContextError<&'a [u8]>,
+    E: FromExternalError<&'a [u8], Cow<'static, str>>,
+{
+    let (input, flags) = map_opt(le_u32, DsRefType::from_bits)(input)?;
+    let (input, extended_type) = cond(flags.contains(DsRefType::EXTENDED), parse_guid)(input)?;
+    let (input, name) = cond(
+        flags.contains(DsRefType::HASNAME),
+        parse_u32_bytes_wstring_nt,
+    )(input)?;
+    let (input, owner) = cond(
+        flags.contains(DsRefType::HASOWNER),
+        parse_u32_bytes_wstring_nt,
+    )(input)?;
+    let (input, children) = {
+        let mut nodes = Vec::new();
+        let mut hasnext = flags.contains(DsRefType::HASFIRSTCHILD);
+        let mut _i = input;
+        while hasnext {
+            let (rest, entry) = parse_dsref_node(_i)?;
+            hasnext = entry.flags.contains(DsRefType::HASNEXTSIBLING);
+            nodes.push(entry);
+            _i = rest;
+        }
+        (_i, nodes)
+    };
+    let (input, properties) =
+        cond(flags.contains(DsRefType::HASPROP), parse_dsref_properties)(input)?;
     Ok((
         input,
-        DSRefSchemaEntry {
-            ref_type,
-            table,
-            schema,
+        DsRefNode {
+            flags,
+            extended_type,
+            name,
+            owner,
+            children,
+            properties,
         },
     ))
 }
@@ -158,52 +206,20 @@ pub fn parse_dsref_schema_contents<'a, E>(
 ) -> IResult<&'a [u8], DSRefSchemaContents, E>
 where
     E: ParseError<&'a [u8]>,
+    E: ContextError<&'a [u8]>,
     E: FromExternalError<&'a [u8], Cow<'static, str>>,
 {
     let (input, clsid) = parse_guid(input)?;
     let len = input.len();
     let (input, a) = parse_guid(input)?;
-    let (input, root_ref) = map_opt(le_u32, DsRefType::from_bits)(input)?;
-    let (input, _d1) = parse_guid(input)?;
-    let (input, connection) = parse_u32_bytes_wstring_nt(input)?;
-    let (input, ref_type) = map_opt(le_u32, DsRefType::from_bits)(input)?;
-    let (input, name) = if ref_type.contains(DsRefType::HASNAME) {
-        parse_u32_bytes_wstring_nt(input)?
-    } else {
-        (input, String::new())
-    };
-    let (input, tables) = {
-        let mut tables = Vec::new();
-        let mut hasnext = ref_type.contains(DsRefType::HASFIRSTCHILD);
-        let mut _i = input;
-        while hasnext {
-            let (rest, entry) = parse_entry(_i)?;
-            hasnext = entry.ref_type.contains(DsRefType::HASNEXTSIBLING);
-            tables.push(entry);
-            _i = rest;
-        }
-        (_i, tables)
-    };
-    let (input, c) = le_u32(input)?;
-    let (input, c2) = parse_guid(input)?;
-    let (input, c3) = le_u16(input)?;
-    let (input, guid) = parse_u32_bytes_wstring_nt(input)?;
+    let (input, root_node) = parse_dsref_node(input)?;
     Ok((
         input,
         DSRefSchemaContents {
             clsid,
             len,
             a,
-            root_ref,
-            _d1,
-            connection,
-            ref_type,
-            name,
-            tables,
-            c,
-            c2, // b30985d6-6bbb-45f2-9ab8-371664f03270 ?
-            c3, //
-            guid,
+            root_node,
         },
     ))
 }

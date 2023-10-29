@@ -62,6 +62,14 @@ pub const CLSID_TYPELIB_MSDT: Uuid = uuid!("a92cc3f0-e7c4-11ce-a47b-00aa005119fb
 /// Microsoft Data Tools DSRef Object (aka `DSRefObject2.Simple`, from `mdt2fref.dll`)
 pub const CLSID_DSREF_R2: Uuid = uuid!("e9b0e6db-811c-11d0-ad51-00a0c90f5739");
 
+// https://github.com/BlackbirdSQL/Firebird-DDEX-SqlEditor/blob/111af4915f189fe48b4326c07c4c649815ed6670/BlackbirdSql.Core/Root/VS.cs#L42
+pub const CLSID_DSREF_PROPERTY_PROVIDER: Uuid = uuid!("b30985d6-6bbb-45f2-9ab8-371664f03270");
+pub const CLSID_DSREF_PROPERTY_PRECISE_TYPE: Uuid = uuid!("39a5a7e7-513f-44a4-b79d-7652cd8962d9");
+
+// https://github.com/adityachandra1/MIT-Cafeteria-DBS/blob/ac3a7a915a427a42035c56592dfe0c73932ae669/src/server/microsoft-sql-server/SqlDbTools.pkgdef#L378
+/// .NET Framework Data Provider for SQL Server
+pub const DATA_PROVIDER_FOR_SQL_SERVER: Uuid = uuid!("1634cdd7-0888-42e3-9fa2-b6d32563b91d");
+
 /// Microsoft DT DDS Form 2.0 (aka `MDTDF.Form.1`)
 pub const CLSID_MSDT_DDS_FORM_2: Uuid = uuid!("105b80d2-95f1-11d0-b0a0-00aa00bdcb5c");
 
@@ -118,10 +126,9 @@ impl<T: Read + Seek> SysDiagramFile<T> {
             let mut labels = Vec::new();
 
             let mut buf = Vec::<u8>::new();
-            let mut i = 0;
+            let mut _i = 0;
             while let Some((clsid, ole_site)) = iter.next() {
                 let site_len = ole_site.object_stream_size as usize;
-                println!("len: {}", site_len);
                 let caption = ole_site.control_tip_text.clone();
 
                 buf.truncate(0); // reset len, keep capacity
@@ -130,8 +137,8 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                 s.read_to_end(&mut buf)?;
                 let data = &buf[..];
 
-                println!("{:>3} {}: {} ", i, clsid, caption);
-                println!("{:?}", ole_site.site_position);
+                //println!("{:>3} (len: {:>4}) {}: {} ", i, site_len, clsid, caption);
+                //println!("{:?}", ole_site.site_position);
                 match clsid {
                     CLSID_SCHGRID => {
                         // Table
@@ -157,7 +164,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                     _ => eprintln!("Unknown clsid: {}", clsid),
                 }
 
-                i += 1;
+                _i += 1;
             }
             Ok((form_control, tables, relationships, labels))
         } else {
