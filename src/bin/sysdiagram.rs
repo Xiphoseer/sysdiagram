@@ -25,6 +25,10 @@ struct Options {
     classes: bool,
 
     #[argh(switch)]
+    /// print form
+    form: bool,
+
+    #[argh(switch)]
     /// print cfb streams
     streams: bool,
 
@@ -96,6 +100,10 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     }
 
     let (form_control, tables, relationships, labels) = reader.schema_form()?;
+    if opts.form {
+        println!("{:#?}", form_control);
+    }
+
     if opts.classes {
         for c in form_control.site_classes {
             eprintln!("- {:?}", c);

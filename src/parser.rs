@@ -101,6 +101,15 @@ where
     ))
 }
 
+// See:
+// - <https://wutils.com/com-dll/constants/constants-MSDDS.htm>
+// - <https://wutils.com/com-dll/constants/constants-MSDDSForm.htm>
+// - <https://wutils.com/com-dll/constants/constants-MSDDSLM.htm>
+// - <https://wutils.com/com-dll/constants/constants-DDSLibrary.htm>
+// - <https://wutils.com/com-dll/constants/constants-DdsShapesLib.htm>
+// - <https://wutils.com/com-dll/constants/constants-DEDesignerExtensibility.htm>
+// - <https://wutils.com/com-dll/constants/constants-VBDataView.htm>
+// - <https://wutils.com/com-dll/constants/constants-VBDataViewSupport.htm>
 pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, pos_count) = le_u16(input)?;
     let (input, d1) = le_u16(input)?;
