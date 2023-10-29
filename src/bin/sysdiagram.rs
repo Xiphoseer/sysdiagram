@@ -1,8 +1,8 @@
 use anyhow::Context;
 use mapr::Mmap;
-use std::fs::File;
 use std::io::Cursor;
 use std::path::PathBuf;
+use std::{fs::File, time::UNIX_EPOCH};
 use sysdiagram::{get_settings, LoadError, SysDiagramFile};
 
 #[derive(argh::FromArgs)]
@@ -60,7 +60,12 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     let mut reader = SysDiagramFile::open(cursor).map_err(LoadError::Cfb)?;
 
     if opts.streams {
-        eprintln!("Root CLSID: {}", reader.root_entry().clsid());
+        let root = reader.root_entry();
+        let ctime = root.created().duration_since(UNIX_EPOCH);
+        let mtime = root.modified().duration_since(UNIX_EPOCH);
+        eprintln!("created: {:?}, modified: {:?}", ctime, mtime);
+
+        eprintln!("Root CLSID: {}", root.clsid());
         let entries = reader.read_root_storage();
 
         eprintln!("CFB Streams:");
