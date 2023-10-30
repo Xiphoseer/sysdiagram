@@ -58,6 +58,11 @@ use uuid::{uuid, Uuid};
 ///
 /// (aka `DSRefObject2.Simple`, from `mdt2fref.dll`)
 pub const CLSID_DSREF_R2: Uuid = uuid!("e9b0e6db-811c-11d0-ad51-00a0c90f5739");
+
+pub const CLSID_DSREF_R1: Uuid = uuid!("ab36de40-2bf4-11ce-ab3c-00aa004404fb");
+
+/// Microsoft Visual Studio Data DSRef Object `{e09ee6ac-fef0-41ae-9f77-3c394da49849}`
+pub const CLSID_DSREF: Uuid = uuid!("e09ee6ac-fef0-41ae-9f77-3c394da49849");
 /// Microsoft Data Tools DSRef Object `DSRefObject2.Simple`
 pub const PROGID_DSREF_R2: &str = "DSRefObject2.Simple";
 
@@ -66,6 +71,9 @@ pub const PROGID_DSREF_R2: &str = "DSRefObject2.Simple";
 pub const GUID_DSREF_PROPERTY_PROVIDER: Uuid = uuid!("b30985d6-6bbb-45f2-9ab8-371664f03270");
 /// `GUID_DSRefProperty_PreciseType` (int32) `{39a5a7e7-513f-44a4-b79d-7652cd8962d9}`
 pub const GUID_DSREF_PROPERTY_PRECISE_TYPE: Uuid = uuid!("39a5a7e7-513f-44a4-b79d-7652cd8962d9");
+
+pub const IID_IDSREF_CONSUMER: Uuid = uuid!("AB36DE42-2BF4-11CE-AB3C-00AA004404FB");
+pub const IID_IDSREF_PROVIDER: Uuid = uuid!("AB36DE41-2BF4-11CE-AB3C-00AA004404FB");
 
 // https://github.com/adityachandra1/MIT-Cafeteria-DBS/blob/ac3a7a915a427a42035c56592dfe0c73932ae669/src/server/microsoft-sql-server/SqlDbTools.pkgdef#L378
 /// .NET Framework Data Provider for SQL Server `{1634cdd7-0888-42e3-9fa2-b6d32563b91d}`
