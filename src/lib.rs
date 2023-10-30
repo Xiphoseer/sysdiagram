@@ -28,7 +28,7 @@ const DSREF_SCHEMA_CONTENTS: &str = "/DSREF-SCHEMA-CONTENTS";
 // See: https://gist.githubusercontent.com/hfiref0x/a77584e47b0feb3779f47c8d7609d4c4/raw/0cedbcaee37c072c623c71c2b2ac03ab020592da/responder_comdata.txt
 
 /// `SchGrid OLE Custom Control module` (`mdt2db.dll`)
-pub const CLSID_TYPELIB_SCHGRID: Uuid = uuid!("e9b0e6da-811c-11d0-ad51-00a0c90f5739");
+pub const TYPELIB_SCHGRID: Uuid = uuid!("e9b0e6da-811c-11d0-ad51-00a0c90f5739");
 
 /// Microsoft Data Tools Database Designer
 pub const CLSID_MSDTDB_DESIGNER: Uuid = uuid!("e9b0e6d4-811c-11d0-ad51-00a0c90f5739");
@@ -41,7 +41,7 @@ pub const CLSID_MSDTDB_SQLSERVER_RELATIONSHIP_PROPERTY_PAGE: Uuid =
 /// Microsoft Data Tools Database Designer SQL Server Index Property Page
 pub const CLSID_MSDTDB_SQLSERVER_INDEX_PROPERTY_PAGE: Uuid =
     uuid!("e9b0e6d8-811c-11d0-ad51-00a0c90f5739");
-/// `SchGrid` aka `MSDTDDGridCtrl2 Object`
+/// MSDTDDGridCtrl2 Object (ProgID `SchGrid.MSDTDDGridCtrl2.1`)
 pub const CLSID_SCHGRID: Uuid = uuid!("e9b0e6d9-811c-11d0-ad51-00a0c90f5739");
 
 pub const IID_ISCHGRID_ALT: Uuid = uuid!("91a88675-8bc8-11ce-9bfd-00aa0062bebf");
@@ -50,16 +50,16 @@ pub const IID_CONTROL_EVENTS: Uuid = uuid!("77d2c934-7779-11d8-9070-00065b840d9c
 
 pub const CLSID_ISCHGRID: Uuid = uuid!("b27d32a0-62d8-4295-8d98-273c25a2da2d");
 pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("847f3bf4-617f-43c7-8535-2986e1d552f8");
-/// Microsoft DT PolyLine Control 2 (aka `MSDTPolylineControl.2`)
+/// Microsoft DT PolyLine Control 2 (ProgID `MSDTPolylineControl.2`)
 pub const CLSID_POLYLINE: Uuid = uuid!("d24d4453-1f01-11d1-8e63-006097d2df48");
-/// Microsoft DT Label Control (aka `MSDTDDSLabel`)
+/// Microsoft DT Label Control (ProgID `MSDTDDSLabel.1`)
 pub const CLSID_DDSLABEL: Uuid = uuid!("d24d4451-1f01-11d1-8e63-006097d2df48");
-/// Microsoft DT Diagram Surface 2 (aka `MSDTDDS`)
+/// Microsoft DT Diagram Surface 2 (ProgID `MSDTDDS.2`)
 pub const CLSID_MSDTDDS: Uuid = uuid!("b0406340-b0c5-11d0-89a9-00a0c9054129");
 /// Microsoft DT DDS TypeLib 2 (`mdt2dd.dll`)
-pub const CLSID_TYPELIB_DTDDS2: Uuid = uuid!("b0406341-b0c5-11d0-89a9-00a0c9054129");
+pub const TYPELIB_DTDDS2: Uuid = uuid!("b0406341-b0c5-11d0-89a9-00a0c9054129");
 /// Microsoft DT Typelib
-pub const CLSID_TYPELIB_MSDT: Uuid = uuid!("a92cc3f0-e7c4-11ce-a47b-00aa005119fb");
+pub const TYPELIB_MSDT: Uuid = uuid!("a92cc3f0-e7c4-11ce-a47b-00aa005119fb");
 
 /// Microsoft DT DDS Form 2.0 (aka `MDTDF.Form.1`)
 pub const CLSID_MSDT_DDS_FORM_2: Uuid = uuid!("105b80d2-95f1-11d0-b0a0-00aa00bdcb5c");
