@@ -72,12 +72,14 @@ pub struct Label {
 
 #[derive(Debug)]
 pub struct Table {
+    pub(crate) _index: usize,
     pub sch_grid: SchGrid,
     pub caption: String,
 }
 
 #[derive(Debug)]
 pub struct Relationship {
+    pub(crate) _index: usize,
     pub control: Polyline,
     pub caption: String,
     pub from: String,

@@ -124,11 +124,11 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     }
     if opts.relationships {
         for relationship in relationships {
-            println!(
+            /*println!(
                 "{:60} {:25} {:25}",
                 relationship.name, relationship.from, relationship.to
-            );
-            println!("{:?}", relationship.control);
+            );*/
+            println!("{:#?}", relationship);
         }
     }
     Ok(())

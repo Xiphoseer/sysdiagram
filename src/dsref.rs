@@ -1,5 +1,49 @@
-use std::{borrow::Cow, collections::BTreeMap};
+//! # Data Source Reference Object
+//!
+//! The `DSRef` object is a tree of nodes that represents a reference to a data source.
+//!
+//! Each [node][`DsRefNode`] can have:
+//!
+//! - A [name][`DsRefNode::name`] string, e.g. the name of the table (see [`HASNAME`][`DsRefType::HASNAME`], [`GetName`], [`SetName`])
+//! - A [owner][`DsRefNode::owner`] string, e.g. the schema of the table (see [`HASOWNER`][`DsRefType::HASOWNER`], [`GetOwner`], [`SetOwner`])
+//! - An [extended type][`DsRefNode::extended_type`] GUID
+//!   - see [`EXTENDED`][`DsRefType::EXTENDED`], [`GetExtendedType`], [`SetExtendedType`]
+//!   - Currently, only the nil GUID `00000000-0000-0000-0000-0000000000000000` is supported
+//! - A sequence of [children][`DsRefNode::children`]
+//!   - see [`HASFIRSTCHILD`][`DsRefType::HASFIRSTCHILD`], [`GetFirstChildNode`], [`SetFirstChildNode`]
+//!   - see [`HASNEXTSIBLING`][`DsRefType::HASNEXTSIBLING`], [`GetNextSiblingNode`], [`SetNextSiblingNode`]
+//! - A set of [GUID][`Uuid`]-keyed, [`Variant`]-valued [properties][`DsRefNode::properties`] (see [`HASPROP`][`DsRefType::HASPROP`], [`GetProperty`], [`SetProperty`])
+//!
+//! Unimplemented:
+//!
+//! - A *moniker* (see [`HASMONIKER`][`DsRefType::HASMONIKER`], [`GetMoniker`], [`SetMoniker`])
+//!
+//! ## Implementations in .NET:
+//! - [`Microsoft.VisualStudio.Data.Interop` Namespace](https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.interop)
+//! - [`Microsoft.VisualStudio.Data.Services.SupportEntities.Interop` Namespace](https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop)
+//! - `Microsoft.VisualStudio.Data.Framework` Namespace:
+//!   - [`DSRefBuilder` Class](https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.framework.dsrefbuilder)
+//! - `Microsoft.SqlServer.Management.UI.VSIntegration` Namespace:
+//!   - [`VsDataSupport` Class](https://learn.microsoft.com/en-us/dotnet/api/microsoft.sqlserver.management.ui.vsintegration.vsdatasupport)
+//! - `Microsoft.ReportDesigner.Data.Server.Dialogs.Pages` Namespace
+//!   - [`IDataSourceGeneralPage.SelectedDSRef` Property](https://learn.microsoft.com/en-us/dotnet/api/microsoft.reportdesigner.data.server.dialogs.pages.idatasourcegeneralpage.selecteddsref)
+//!
+//! [`GetName`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getname
+//! [`SetName`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setname
+//! [`GetOwner`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getowner
+//! [`SetOwner`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setowner
+//! [`GetMoniker`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getmoniker
+//! [`SetMoniker`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setmoniker
+//! [`GetExtendedType`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getextendedtype
+//! [`SetExtendedType`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setextendedtype
+//! [`GetFirstChildNode`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getfirstchildnode
+//! [`SetFirstChildNode`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setfirstchildnode
+//! [`GetNextSiblingNode`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getnextsiblingnode
+//! [`SetNextSiblingNode`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setnextsiblingnode
+//! [`GetProperty`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getproperty
+//! [`SetProperty`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setproperty
 
+use crate::parse_u32_bytes_wstring_nt;
 use ms_oforms::common::{parse_guid, VarType};
 use nom::{
     combinator::{cond, map, map_opt},
@@ -7,9 +51,25 @@ use nom::{
     number::complete::{le_u16, le_u32},
     IResult,
 };
-use uuid::Uuid;
+use std::{borrow::Cow, collections::BTreeMap};
+use uuid::{uuid, Uuid};
 
-use crate::parse_u32_bytes_wstring_nt;
+/// Microsoft Data Tools DSRef Object `{e9b0e6db-811c-11d0-ad51-00a0c90f5739}`
+///
+/// (aka `DSRefObject2.Simple`, from `mdt2fref.dll`)
+pub const CLSID_DSREF_R2: Uuid = uuid!("e9b0e6db-811c-11d0-ad51-00a0c90f5739");
+/// Microsoft Data Tools DSRef Object `DSRefObject2.Simple`
+pub const PROGID_DSREF_R2: &str = "DSRefObject2.Simple";
+
+// https://github.com/BlackbirdSQL/Firebird-DDEX-SqlEditor/blob/111af4915f189fe48b4326c07c4c649815ed6670/BlackbirdSql.Core/Root/VS.cs#L42
+/// `GUID_DSRefProperty_Provider` (GUID BSTR) `{b30985d6-6bbb-45f2-9ab8-371664f03270}`
+pub const GUID_DSREF_PROPERTY_PROVIDER: Uuid = uuid!("b30985d6-6bbb-45f2-9ab8-371664f03270");
+/// `GUID_DSRefProperty_PreciseType` (int32) `{39a5a7e7-513f-44a4-b79d-7652cd8962d9}`
+pub const GUID_DSREF_PROPERTY_PRECISE_TYPE: Uuid = uuid!("39a5a7e7-513f-44a4-b79d-7652cd8962d9");
+
+// https://github.com/adityachandra1/MIT-Cafeteria-DBS/blob/ac3a7a915a427a42035c56592dfe0c73932ae669/src/server/microsoft-sql-server/SqlDbTools.pkgdef#L378
+/// .NET Framework Data Provider for SQL Server `{1634cdd7-0888-42e3-9fa2-b6d32563b91d}`
+pub const DATA_PROVIDER_FOR_SQL_SERVER: Uuid = uuid!("1634cdd7-0888-42e3-9fa2-b6d32563b91d");
 
 bitflags::bitflags! {
     /// VS Data Services DsRef Type Enum
