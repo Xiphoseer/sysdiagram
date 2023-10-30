@@ -14,6 +14,7 @@ use ms_oforms::{controls::form::FormControl, OFormsFile};
 use nom::error::VerboseError;
 pub use parser::*;
 mod connection_string;
+pub mod dds;
 pub mod dsref;
 pub use connection_string::*;
 use dsref::{parse_dsref_schema_contents, DSRefSchemaContents};

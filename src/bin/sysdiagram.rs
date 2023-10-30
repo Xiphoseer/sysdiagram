@@ -96,7 +96,8 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         }
     }
     if opts.dsref {
-        eprintln!("{:#?}", dsref_schema_contents);
+        println!("time: {}", dsref_schema_contents.get_time());
+        println!("{:#?}", dsref_schema_contents);
     }
 
     let (form_control, tables, relationships, labels) = reader.schema_form()?;
@@ -106,7 +107,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
 
     if opts.classes {
         for c in form_control.site_classes {
-            eprintln!("- {:?}", c);
+            println!("- {:?}", c);
         }
     }
 
@@ -119,7 +120,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     if opts.tables {
         for table in tables {
             println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
-            eprintln!("{:?}", table.sch_grid);
+            println!("{:?}", table.sch_grid);
         }
     }
     if opts.relationships {

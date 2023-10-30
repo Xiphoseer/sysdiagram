@@ -1,6 +1,9 @@
 //! # Data Source Reference Object
 //!
-//! The `DSRef` object is a tree of nodes that represents a reference to a data source.
+//! The `DSRef` COM object is an abstraction used by *Visual Studio* (VS) and *SQL Server Management Studio* (SSMS)
+//! to represent a data source. It is an extensible tree of typed nodes with a common set of types provided
+//! by [`DsRefType`]. Custom Data Providers written against the [Data Designer Extensibility (DDEX) SDK][MS-DDEX]
+//! can leverage the DSRef Objects to implement drag-n-drop of data objects.
 //!
 //! Each [node][`DsRefNode`] can have:
 //!
@@ -18,6 +21,20 @@
 //!
 //! - A *moniker* (see [`HASMONIKER`][`DsRefType::HASMONIKER`], [`GetMoniker`], [`SetMoniker`])
 //!
+//! ## Properties
+//!
+//! There are two known properties:
+//!
+//! - [`GUID_DSREF_PROPERTY_PROVIDER`] to identify the VS Data Provider via curly-braced GUID string.
+//! - [`GUID_DSREF_PROPERTY_PRECISE_TYPE`] which is a (as yet undocumented) [`i32`]
+//! - [`GUID_DSREF_PROPERTY_QUALIFIER`] which is probably what microsoft docs mention
+//!   as `GUID_daVinciQueryDSRefProperty_Qualifier` [(Source)](https://learn.microsoft.com/en-us/previous-versions/visualstudio/visual-studio-2012/bb161559(v=vs.110)).
+//!
+//! ## Persistence
+//!
+//! For the sysdiagrams from 2011, a `DSRef` object was persisted to the `/DSREF-SCHEMA-CONTENTS` stream,
+//! prefixed with [`CLSID_DSREF_R2`] (ProgID `DSRefObject2.Simple`).
+//!
 //! ## Implementations in .NET:
 //! - [`Microsoft.VisualStudio.Data.Interop` Namespace](https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.interop)
 //! - [`Microsoft.VisualStudio.Data.Services.SupportEntities.Interop` Namespace](https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop)
@@ -27,7 +44,9 @@
 //!   - [`VsDataSupport` Class](https://learn.microsoft.com/en-us/dotnet/api/microsoft.sqlserver.management.ui.vsintegration.vsdatasupport)
 //! - `Microsoft.ReportDesigner.Data.Server.Dialogs.Pages` Namespace
 //!   - [`IDataSourceGeneralPage.SelectedDSRef` Property](https://learn.microsoft.com/en-us/dotnet/api/microsoft.reportdesigner.data.server.dialogs.pages.idatasourcegeneralpage.selecteddsref)
+//! - [`Microsoft.SqlServer.Management.Data.Interop`](https://learn.microsoft.com/en-us/previous-versions/sql/sql-server-2008-r2/ee642594(v=sql.105))
 //!
+//! [MS-DDEX]: https://learn.microsoft.com/en-us/previous-versions/visualstudio/visual-studio-2012/bb165128(v=vs.110)
 //! [`GetName`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getname
 //! [`SetName`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setname
 //! [`GetOwner`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getowner
@@ -46,9 +65,10 @@
 use crate::parse_u32_bytes_wstring_nt;
 use ms_oforms::common::{parse_guid, VarType};
 use nom::{
+    bytes::complete::tag,
     combinator::{cond, map, map_opt},
     error::{ContextError, FromExternalError, ParseError},
-    number::complete::{le_u16, le_u32},
+    number::complete::{le_u16, le_u32, le_u64},
     IResult,
 };
 use std::{borrow::Cow, collections::BTreeMap};
@@ -71,6 +91,8 @@ pub const PROGID_DSREF_R2: &str = "DSRefObject2.Simple";
 pub const GUID_DSREF_PROPERTY_PROVIDER: Uuid = uuid!("b30985d6-6bbb-45f2-9ab8-371664f03270");
 /// `GUID_DSRefProperty_PreciseType` (int32) `{39a5a7e7-513f-44a4-b79d-7652cd8962d9}`
 pub const GUID_DSREF_PROPERTY_PRECISE_TYPE: Uuid = uuid!("39a5a7e7-513f-44a4-b79d-7652cd8962d9");
+/// `GUID_DSRefProperty_Qualifier` (BSTR?) `{4656baea-f397-11ce-bfe1-00aa0057b34e}`
+pub const GUID_DSREF_PROPERTY_QUALIFIER: Uuid = uuid!("4656baea-f397-11ce-bfe1-00aa0057b34e");
 
 pub const IID_IDSREF_CONSUMER: Uuid = uuid!("AB36DE42-2BF4-11CE-AB3C-00AA004404FB");
 pub const IID_IDSREF_PROVIDER: Uuid = uuid!("AB36DE41-2BF4-11CE-AB3C-00AA004404FB");
@@ -182,9 +204,13 @@ bitflags::bitflags! {
 pub struct DsRefNode {
     pub flags: DsRefType,
     pub extended_type: Option<Uuid>,
+    /// > The value of a `DSRef::DSREFNODEID_ROOT` node name property, as set with the method, is conventionally a connection string.
+    /// Source: <https://learn.microsoft.com/en-us/previous-versions/visualstudio/visual-studio-2012/bb161553(v=vs.110)>
     pub name: Option<String>,
     pub owner: Option<String>,
     pub children: Vec<DsRefNode>,
+    /// > The Query designer uses the `GUID_daVinciQueryDSRefProperty_Qualifier` identifier to store the qualifier of the
+    /// > catalog schema table name. There is also a server property that specifies the server.
     pub properties: Option<BTreeMap<Uuid, Variant>>,
 }
 
@@ -193,8 +219,25 @@ pub struct DsRefNode {
 pub struct DSRefSchemaContents {
     pub clsid: Uuid,
     pub(crate) len: usize,
-    pub(crate) a: Uuid, // probably not actually a UUID
+    //pub(crate) a: BString, // probably not actually a UUID
+    pub(crate) a: u16,
+    pub timestamp: u64,
+    pub(crate) b: u32,
     pub root_node: DsRefNode,
+}
+
+const WINDOWS_TICK: u64 = 10000000;
+const SEC_TO_UNIX_EPOCH: u64 = 11644473600;
+
+fn windows_tick_to_unix_seconds(windows_ticks: u64) -> u64 {
+    windows_ticks / WINDOWS_TICK - SEC_TO_UNIX_EPOCH
+}
+
+impl DSRefSchemaContents {
+    /// Get the timestamp as seconds from [`std::time::UNIX_EPOCH`]
+    pub fn get_time(&self) -> u64 {
+        windows_tick_to_unix_seconds(self.timestamp)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -279,7 +322,10 @@ where
 {
     let (input, clsid) = parse_guid(input)?;
     let len = input.len();
-    let (input, a) = parse_guid(input)?;
+    let (input, _version) = tag([0x00, 0x00])(input)?;
+    let (input, a) = le_u16(input)?;
+    let (input, timestamp) = le_u64(input)?;
+    let (input, b) = le_u32(input)?;
     let (input, root_node) = parse_dsref_node(input)?;
     Ok((
         input,
@@ -287,6 +333,8 @@ where
             clsid,
             len,
             a,
+            timestamp,
+            b,
             root_node,
         },
     ))
