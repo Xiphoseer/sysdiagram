@@ -10,7 +10,24 @@
 //! - <http://sqlsoundings.blogspot.com/2011/10/ssis-word-wrapping-annotations-using.html>
 //! - <https://www.sqlservercentral.com/articles/hidden-ssis-features-word-wrapping-your-annotations-and-more>
 
+use std::borrow::Cow;
+
+use bstr::BString;
+use ms_oforms::properties::{
+    font::{parse_std_font, StdFont},
+    parse_position, parse_size, Position, Size,
+};
+use nom::{
+    bytes::complete::take,
+    combinator::{map, rest},
+    error::{FromExternalError, ParseError},
+    multi::count,
+    number::complete::{le_i32, le_u16, le_u32, le_u8},
+    IResult,
+};
 use uuid::{uuid, Uuid};
+
+use crate::parse_u16_wstring;
 
 /// Microsoft DT PolyLine Control 2 (ProgID `MSDTPolylineControl.2`)
 pub const CLSID_POLYLINE: Uuid = uuid!("d24d4453-1f01-11d1-8e63-006097d2df48");
@@ -31,3 +48,105 @@ pub const TYPELIB_DDS_FORM: Uuid = uuid!("105b80d0-95f1-11d0-b0a0-00aa00bdcb5c")
 
 /// Microsoft DT DDSform 2.1 FormPackage
 pub const CLSID_DDS2_FORM_PACKAGE: Uuid = uuid!("105b80d5-95f1-11d0-b0a0-00aa00bdcb5c");
+
+#[derive(Debug)]
+pub struct Polyline {
+    pub d1: u16,
+    pub positions: Vec<Position>,
+    //pub pos: Position,
+    //pub d2: [u8; 32],
+    //pub d3: u32,
+    //pub d4: u32,
+    //pub d5: u32,
+    //pub d6: u32,
+    //pub d7: u32,
+    //pub d8: [u8; 6],
+    //pub d9: u32,
+    pub(crate) _rest: BString,
+}
+
+#[derive(Debug)]
+pub struct Label {
+    pub(crate) _d1: u32,
+    pub(crate) _size: Size,
+    pub(crate) _b1: u8,
+    pub(crate) _d4: i32,
+    pub(crate) _d5: i32,
+    pub(crate) _d6: i32,
+    pub(crate) _x1: BString,
+    pub font: StdFont,
+    pub text: String,
+}
+
+pub fn parse_label<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Label, E>
+where
+    E: ParseError<&'a [u8]>,
+    E: FromExternalError<&'a [u8], Cow<'static, str>>,
+{
+    let (input, _d1) = le_u32(input)?;
+    let (input, _size) = parse_size(input)?;
+
+    let (input, _b1) = le_u8(input)?;
+
+    let (input, _d4) = le_i32(input)?;
+    let (input, _d5) = le_i32(input)?;
+    let (input, _d6) = le_i32(input)?;
+
+    let (input, _x1) = map(take(7usize), BString::from)(input)?;
+    let (input, font) = parse_std_font(input)?;
+    let (input, text) = parse_u16_wstring(input)?;
+    Ok((
+        input,
+        Label {
+            _d1,
+            _size,
+            _b1,
+            _d4,
+            _d5,
+            _d6,
+            _x1,
+            font,
+            text,
+        },
+    ))
+}
+
+// See:
+// - <https://wutils.com/com-dll/constants/constants-MSDDS.htm>
+// - <https://wutils.com/com-dll/constants/constants-MSDDSForm.htm>
+// - <https://wutils.com/com-dll/constants/constants-MSDDSLM.htm>
+// - <https://wutils.com/com-dll/constants/constants-DDSLibrary.htm>
+// - <https://wutils.com/com-dll/constants/constants-DdsShapesLib.htm>
+// - <https://wutils.com/com-dll/constants/constants-DEDesignerExtensibility.htm>
+// - <https://wutils.com/com-dll/constants/constants-VBDataView.htm>
+// - <https://wutils.com/com-dll/constants/constants-VBDataViewSupport.htm>
+pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
+    let (input, pos_count) = le_u16(input)?;
+    let (input, d1) = le_u16(input)?;
+    let (input, positions) = count(parse_position, usize::from(pos_count))(input)?;
+    /*let (input, _d2) = take(32usize)(input)?;
+    let (input, d3) = le_u32(input)?;
+    let (input, d4) = le_u32(input)?;
+    let (input, pos) = parse_position(input)?;
+    let (input, d5) = le_u32(input)?;
+    let (input, d6) = le_u32(input)?;
+    let (input, d7) = le_u32(input)?;
+    let (input, _d8) = take(6usize)(input)?;
+    let (input, d9) = le_u32(input)?;*/
+    let (input, _rest) = map(rest, BString::from)(input)?;
+    Ok((
+        input,
+        Polyline {
+            //pos,
+            d1,
+            positions,
+            /*d2, d3,
+            d4,
+            d5,
+            d6,
+            d7,
+            d8, d9,*/
+            _rest,
+        },
+    ))
+}

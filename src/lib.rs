@@ -28,6 +28,7 @@ use std::{
     ops::DerefMut,
 };
 mod io;
+use dds::Label;
 pub use io::*;
 mod parser;
 use ms_oforms::{controls::form::FormControl, OFormsFile};
@@ -40,7 +41,7 @@ pub use connection_string::*;
 use dsref::{parse_dsref_schema_contents, DSRefSchemaContents};
 use uuid::{uuid, Uuid};
 
-use crate::dds::{CLSID_DDSLABEL, CLSID_POLYLINE};
+use crate::dds::{parse_label, parse_polyline, CLSID_DDSLABEL, CLSID_POLYLINE};
 
 const DSREF_SCHEMA_CONTENTS: &str = "/DSREF-SCHEMA-CONTENTS";
 
@@ -147,7 +148,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                     }
                     CLSID_POLYLINE => {
                         // Foreign Key
-                        let (_, control) = parser::parse_polyline(data)?;
+                        let (_, control) = parse_polyline(data)?;
                         let (_, (name, from, to)) = parser::parse_relationship(&caption[..])?;
                         relationships.push(Relationship {
                             _index: _i,
@@ -159,7 +160,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                         });
                     }
                     CLSID_DDSLABEL => {
-                        let (_, label) = parser::parse_label::<nom::error::Error<_>>(data)?;
+                        let (_, label) = parse_label::<nom::error::Error<_>>(data)?;
                         labels.push(label);
                     }
                     _ => eprintln!("Unknown clsid: {}", clsid),
