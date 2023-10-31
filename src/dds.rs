@@ -14,6 +14,7 @@ use std::borrow::Cow;
 
 use bstr::BString;
 use ms_oforms::properties::{
+    color::{parse_ole_color, OleColor},
     font::{parse_std_font, StdFont},
     parse_position, parse_size, Position, Size,
 };
@@ -22,7 +23,7 @@ use nom::{
     combinator::{map, rest},
     error::{FromExternalError, ParseError},
     multi::count,
-    number::complete::{le_i32, le_u16, le_u32, le_u8},
+    number::complete::{le_u16, le_u32},
     IResult,
 };
 use uuid::{uuid, Uuid};
@@ -68,12 +69,12 @@ pub struct Polyline {
 #[derive(Debug)]
 pub struct Label {
     pub(crate) _d1: u32,
-    pub(crate) _size: Size,
-    pub(crate) _b1: u8,
-    pub(crate) _d4: i32,
-    pub(crate) _d5: i32,
-    pub(crate) _d6: i32,
-    pub(crate) _x1: BString,
+    pub size: Size,
+    pub(crate) _d2: BString,
+    pub back_color: OleColor,
+    pub fore_color: OleColor,
+    pub(crate) _d3: u32,
+    pub(crate) _flags: u16,
     pub font: StdFont,
     pub text: String,
 }
@@ -82,29 +83,28 @@ pub fn parse_label<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Label, E>
 where
     E: ParseError<&'a [u8]>,
     E: FromExternalError<&'a [u8], Cow<'static, str>>,
+    E: FromExternalError<&'a [u8], u32>,
 {
     let (input, _d1) = le_u32(input)?;
-    let (input, _size) = parse_size(input)?;
+    let (input, size) = parse_size(input)?;
 
-    let (input, _b1) = le_u8(input)?;
-
-    let (input, _d4) = le_i32(input)?;
-    let (input, _d5) = le_i32(input)?;
-    let (input, _d6) = le_i32(input)?;
-
-    let (input, _x1) = map(take(7usize), BString::from)(input)?;
+    let (input, _d2) = map(take(6usize), BString::from)(input)?;
+    let (input, back_color) = parse_ole_color(input)?;
+    let (input, fore_color) = parse_ole_color(input)?;
+    let (input, _d3) = le_u32(input)?;
+    let (input, _flags) = le_u16(input)?;
     let (input, font) = parse_std_font(input)?;
     let (input, text) = parse_u16_wstring(input)?;
     Ok((
         input,
         Label {
             _d1,
-            _size,
-            _b1,
-            _d4,
-            _d5,
-            _d6,
-            _x1,
+            size,
+            _d2,
+            back_color,
+            fore_color,
+            _d3,
+            _flags,
             font,
             text,
         },
