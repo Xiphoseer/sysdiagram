@@ -13,7 +13,7 @@ readme = "README.md"
 cli = ["dep:anyhow", "dep:mapr", "dep:argh"]
 
 [dependencies]
-ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "5a22eaa"}
+ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "8b6b924"}
 base64 = "0.21"
 cfb = "0.9"
 encoding = "0.2"
