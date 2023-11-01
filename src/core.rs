@@ -5,7 +5,7 @@ use ms_oforms::properties::Size;
 use crate::{dds::Polyline, DSRefSchemaContents};
 
 /// ## SchGrid Control
-/// 
+///
 /// See: <http://www.dejadejadeja.com/detech/ocxdb/mdt2db.dll.txt.lisp>
 #[derive(Debug)]
 #[allow(dead_code)]

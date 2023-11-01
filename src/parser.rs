@@ -1,7 +1,7 @@
-use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
+use encoding_rs::UTF_16LE;
 use ms_oforms::properties::parse_size;
 use nom::bytes::complete::{tag, take, take_until};
-use nom::combinator::{map_res, recognize, verify};
+use nom::combinator::{map, map_opt, map_res, recognize, verify};
 use nom::error::{FromExternalError, ParseError};
 use nom::multi::{count, length_value, many_till};
 use nom::number::complete::{le_u16, le_u32};
@@ -12,15 +12,20 @@ use std::convert::TryFrom;
 
 use crate::{SchGrid, SchGridInner};
 
-fn parse_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(
-        recognize(many_till(le_u16, tag([0x00, 0x00]))),
-        |x: &[u8]| UTF_16LE.decode(&x[..(x.len() - 2)], DecoderTrap::Strict),
-    )(input)
+fn decode_utf16(input: &[u8]) -> Option<String> {
+    UTF_16LE
+        .decode_without_bom_handling_and_without_replacement(input)
+        .map(Cow::into_owned)
 }
 
-fn decode_utf16(input: &[u8]) -> Result<String, Cow<'static, str>> {
-    UTF_16LE.decode(input, DecoderTrap::Strict)
+fn parse_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
+    map_opt(
+        map(
+            recognize(many_till(le_u16, tag([0x00, 0x00]))),
+            |x: &[u8]| &x[..(x.len() - 2)],
+        ),
+        decode_utf16,
+    )(input)
 }
 
 fn le_u32_2(input: &[u8]) -> IResult<&[u8], (u32, u32)> {
@@ -33,14 +38,14 @@ where
     E: FromExternalError<&'a [u8], Cow<'static, str>>,
 {
     let (input, len) = le_u32(input)?;
-    let (input, string) = map_res(take(len - 2), decode_utf16)(input)?;
+    let (input, string) = map_opt(take(len - 2), decode_utf16)(input)?;
     let (input, _) = tag([0x00, 0x00])(input)?;
     Ok((input, string))
 }
 
 pub(crate) fn parse_u32_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
     let (input, len) = le_u32(input)?;
-    let (input, string) = map_res(take(len * 2 - 2), decode_utf16)(input)?;
+    let (input, string) = map_opt(take(len * 2 - 2), decode_utf16)(input)?;
     let (input, _) = tag([0x00, 0x00])(input)?;
     Ok((input, string))
 }
@@ -51,7 +56,7 @@ where
     E: FromExternalError<&'a [u8], Cow<'static, str>>,
 {
     let (input, len) = le_u16(input)?;
-    map_res(take((len as usize) << 1), decode_utf16)(input)
+    map_opt(take((len as usize) << 1), decode_utf16)(input)
 }
 
 pub fn parse_relationship(input: &str) -> IResult<&str, (String, String, String)> {
