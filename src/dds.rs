@@ -22,7 +22,7 @@ use nom::{
     combinator::{map, map_opt, rest},
     error::{FromExternalError, ParseError},
     multi::count,
-    number::complete::{le_u16, le_u32},
+    number::complete::{le_u16, le_u32, le_u8},
     IResult,
 };
 use std::borrow::Cow;
@@ -61,8 +61,9 @@ pub struct Polyline {
     pub(crate) _d4: u32,
     pub label_id: u32,
     pub(crate) _x2: BString,
-    pub(crate) _pos: Position,
-    pub label_width: u32,
+    pub label_pos: Position,
+    pub label_size: Size,
+    _d7: u8,
     //pub(crate) _d7: i32,
     //pub d8: [u8; 6],
     //pub d9: u32,
@@ -171,7 +172,8 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, label_id) = le_u32(input)?;
     let (input, _x2) = map(take(4usize), BString::from)(input)?;
     let (input, _pos) = parse_position(input)?;
-    let (input, _d5) = le_u32(input)?;
+    let (input, label_size) = parse_size(input)?;
+    let (input, _d7) = le_u8(input)?;
     /*let (input, _d8) = take(6usize)(input)?;
     let (input, d9) = le_u32(input)?;*/
     let (input, _rest) = map(rest, BString::from)(input)?;
@@ -187,8 +189,9 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
             _d4,
             label_id,
             _x2,
-            _pos,
-            label_width: _d5,
+            label_pos: _pos,
+            label_size,
+            _d7,
             /*d8, d9,*/
             _rest,
         },

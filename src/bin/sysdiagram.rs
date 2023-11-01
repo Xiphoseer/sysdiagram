@@ -116,7 +116,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         Control::SchGrid(_) => opts.tables,
         _ => false,
     }) {
-        println!("{:?}", site);
+        println!("==> {:?}", site);
         match control {
             Control::SchGrid(sch_grid) => {
                 println!("{:?}", sch_grid);
@@ -129,7 +129,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                     "{:60} {:25} {:25}",
                     relationship.name, relationship.from, relationship.to
                 );*/
-                println!("{:#?}", polyline);
+                println!("{:?}", polyline);
             }
             Control::Unknown(_clsid) => {
                 // TODO?
