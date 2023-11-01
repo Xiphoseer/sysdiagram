@@ -43,14 +43,14 @@ pub(crate) struct SchGridInner(pub(crate) Vec<u32>);
 
 #[derive(Debug)]
 pub struct Table {
-    pub(crate) _index: usize,
+    pub id: i32,
     pub sch_grid: SchGrid,
     pub caption: String,
 }
 
 #[derive(Debug)]
 pub struct Relationship {
-    pub(crate) _index: usize,
+    pub id: i32,
     pub control: Polyline,
     pub caption: String,
     pub from: String,

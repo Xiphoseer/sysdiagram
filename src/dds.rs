@@ -52,13 +52,15 @@ pub const CLSID_DDS2_FORM_PACKAGE: Uuid = uuid!("105b80d5-95f1-11d0-b0a0-00aa00b
 
 #[derive(Debug)]
 pub struct Polyline {
+    //pub pos: Position,
     pub d1: u16,
     pub positions: Vec<Position>,
-    //pub pos: Position,
-    //pub d2: [u8; 32],
-    //pub d3: u32,
-    //pub d4: u32,
-    //pub d5: u32,
+    pub(crate) _d2: u32,
+    pub(crate) _d3: u32,
+    pub(crate) _color: OleColor,
+    pub(crate) _x1: BString,
+    pub(crate) _d4: u32,
+    pub label_id: u32,
     //pub d6: u32,
     //pub d7: u32,
     //pub d8: [u8; 6],
@@ -160,11 +162,13 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, pos_count) = le_u16(input)?;
     let (input, d1) = le_u16(input)?;
     let (input, positions) = count(parse_position, usize::from(pos_count))(input)?;
-    /*let (input, _d2) = take(32usize)(input)?;
-    let (input, d3) = le_u32(input)?;
-    let (input, d4) = le_u32(input)?;
-    let (input, pos) = parse_position(input)?;
-    let (input, d5) = le_u32(input)?;
+    let (input, _d2) = le_u32(input)?;
+    let (input, _d3) = le_u32(input)?;
+    let (input, _color) = parse_ole_color(input)?;
+    let (input, _x1) = map(take(16usize), BString::from)(input)?;
+    let (input, _d4) = le_u32(input)?;
+    let (input, label_id) = le_u32(input)?;
+    /*let (input, pos) = parse_position(input)?;
     let (input, d6) = le_u32(input)?;
     let (input, d7) = le_u32(input)?;
     let (input, _d8) = take(6usize)(input)?;
@@ -176,10 +180,13 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
             //pos,
             d1,
             positions,
-            /*d2, d3,
-            d4,
-            d5,
-            d6,
+            _d2,
+            _d3,
+            _color,
+            _x1,
+            _d4,
+            label_id,
+            /*d6,
             d7,
             d8, d9,*/
             _rest,

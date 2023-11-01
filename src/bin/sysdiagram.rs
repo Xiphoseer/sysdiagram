@@ -112,14 +112,17 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     }
 
     if opts.labels {
-        for label in labels {
-            println!("{:?}", label);
+        for (id, label) in labels {
+            println!("{:>3} {:?}", id, label);
         }
     }
 
     if opts.tables {
         for table in tables {
-            println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
+            println!(
+                "{:>3} {}.{}",
+                table.id, table.sch_grid.schema, table.sch_grid.name
+            );
             println!("{:?}", table.sch_grid);
         }
     }

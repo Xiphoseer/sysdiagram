@@ -84,7 +84,12 @@ pub struct SysDiagramFile<T> {
     inner: OFormsFile<T>,
 }
 
-type SchemaForm = (FormControl, Vec<Table>, Vec<Relationship>, Vec<Label>);
+type SchemaForm = (
+    FormControl,
+    Vec<Table>,
+    Vec<Relationship>,
+    Vec<(i32, Label)>,
+);
 
 impl<T: Read + Seek> SysDiagramFile<T> {
     pub fn open(inner: T) -> std::io::Result<Self> {
@@ -132,7 +137,6 @@ impl<T: Read + Seek> SysDiagramFile<T> {
         let mut labels = Vec::new();
 
         let mut buf = Vec::<u8>::new();
-        let mut _i = 0;
         while let Some((clsid, ole_site)) = iter.next() {
             let site_len = ole_site.object_stream_size as usize;
             let caption = ole_site.control_tip_text.clone();
@@ -150,7 +154,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                     // Table
                     let (_, sch_grid) = parser::parse_sch_grid(data)?;
                     tables.push(Table {
-                        _index: _i,
+                        id: ole_site.id,
                         sch_grid,
                         caption,
                     });
@@ -160,7 +164,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                     let (_, control) = parse_polyline(data)?;
                     let (_, (name, from, to)) = parser::parse_relationship(&caption[..])?;
                     relationships.push(Relationship {
-                        _index: _i,
+                        id: ole_site.id,
                         control,
                         caption,
                         name,
@@ -170,12 +174,10 @@ impl<T: Read + Seek> SysDiagramFile<T> {
                 }
                 CLSID_DDSLABEL => {
                     let (_, label) = parse_label::<nom::error::Error<_>>(data)?;
-                    labels.push(label);
+                    labels.push((ole_site.id, label));
                 }
                 _ => eprintln!("Unknown clsid: {}", clsid),
             }
-
-            _i += 1;
         }
         let form_control = form.into_form_control();
         Ok((form_control, tables, relationships, labels))
