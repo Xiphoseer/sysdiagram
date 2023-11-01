@@ -19,6 +19,7 @@
 //! and "Microsoft Data Tools Table Designer" were implemented using the "Microsoft DT DDS Form 2.0"
 //! technology. *DDS* in this case stands for [*DaVinci Diagram Surface*][`dds`], which is a set of OLE
 //! Controls originating in Visual Studio.
+//!
 
 mod core;
 pub use core::*;
