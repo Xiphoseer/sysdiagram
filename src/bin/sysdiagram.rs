@@ -3,7 +3,7 @@ use mapr::Mmap;
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::{fs::File, time::UNIX_EPOCH};
-use sysdiagram::{get_settings, LoadError, SysDiagramFile};
+use sysdiagram::{get_settings, Control, Error, SysDiagramFile};
 
 #[derive(argh::FromArgs)]
 /// parse a sysdiagram from a FDB file
@@ -61,7 +61,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         unimplemented!("--base64 is unimplemented");
     }
 
-    let mut reader = SysDiagramFile::open(cursor).map_err(LoadError::Cfb)?;
+    let mut reader = SysDiagramFile::open(cursor).map_err(Error::Cfb)?;
 
     if opts.streams {
         let root = reader.root_entry();
@@ -100,39 +100,40 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         println!("{:#?}", dsref_schema_contents);
     }
 
-    let (form_control, tables, relationships, labels) = reader.schema_form()?;
+    let (form_control, controls) = reader.schema_form()?;
     if opts.form {
         println!("{:#?}", form_control);
     }
-
     if opts.classes {
         for c in form_control.site_classes {
             println!("- {:?}", c);
         }
     }
 
-    if opts.labels {
-        for (id, label) in labels {
-            println!("{:>3} {:?}", id, label);
-        }
-    }
-
-    if opts.tables {
-        for table in tables {
-            println!(
-                "{:>3} {}.{}",
-                table.id, table.sch_grid.schema, table.sch_grid.name
-            );
-            println!("{:?}", table.sch_grid);
-        }
-    }
-    if opts.relationships {
-        for relationship in relationships {
-            /*println!(
-                "{:60} {:25} {:25}",
-                relationship.name, relationship.from, relationship.to
-            );*/
-            println!("{:#?}", relationship);
+    for (site, control) in controls.iter().filter(|(_, c)| match c {
+        Control::Label(_) => opts.labels,
+        Control::Polyline(_) => opts.relationships,
+        Control::SchGrid(_) => opts.tables,
+        _ => false,
+    }) {
+        println!("{:?}", site);
+        match control {
+            Control::SchGrid(sch_grid) => {
+                println!("{:?}", sch_grid);
+            }
+            Control::Label(label) => {
+                println!("{:?}", label);
+            }
+            Control::Polyline(polyline) => {
+                /*println!(
+                    "{:60} {:25} {:25}",
+                    relationship.name, relationship.from, relationship.to
+                );*/
+                println!("{:#?}", polyline);
+            }
+            Control::Unknown(_clsid) => {
+                // TODO?
+            }
         }
     }
     Ok(())

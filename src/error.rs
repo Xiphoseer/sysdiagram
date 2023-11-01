@@ -9,7 +9,7 @@ use thiserror::Error;
 
 /// Error wrapper when loading a sysdiagram
 #[derive(Debug, Error, Display)]
-pub enum LoadError {
+pub enum Error {
     /// Not implemented
     NotImplemented,
     /// Could not decode base64 value
@@ -39,31 +39,31 @@ pub enum LoadError {
 }
 
 /// Result when loading a sysdiagram
-pub type LoadResult<T> = Result<T, LoadError>;
+pub type LoadResult<T> = Result<T, Error>;
 
-impl<I: InputLength> From<nom::Err<nom::error::Error<I>>> for LoadError {
-    fn from(e: nom::Err<nom::error::Error<I>>) -> LoadError {
+impl<I: InputLength> From<nom::Err<nom::error::Error<I>>> for Error {
+    fn from(e: nom::Err<nom::error::Error<I>>) -> Error {
         match e {
             // Need to translate the error here, as this lives longer than the input
-            nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error(e) => LoadError::ParseError(e.code, e.input.input_len()),
-            nom::Err::Failure(e) => LoadError::ParseFailure(e.code, e.input.input_len()),
+            nom::Err::Incomplete(_) => Error::Incomplete,
+            nom::Err::Error(e) => Error::ParseError(e.code, e.input.input_len()),
+            nom::Err::Failure(e) => Error::ParseFailure(e.code, e.input.input_len()),
         }
     }
 }
 
-impl<I: InputLength> From<nom::Err<VerboseError<I>>> for LoadError {
-    fn from(e: nom::Err<VerboseError<I>>) -> LoadError {
+impl<I: InputLength> From<nom::Err<VerboseError<I>>> for Error {
+    fn from(e: nom::Err<VerboseError<I>>) -> Error {
         match e {
             // Need to translate the error here, as this lives longer than the input
-            nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error(e) => LoadError::ParseErrorVerbose(
+            nom::Err::Incomplete(_) => Error::Incomplete,
+            nom::Err::Error(e) => Error::ParseErrorVerbose(
                 e.errors
                     .into_iter()
                     .map(|e| (e.1, e.0.input_len()))
                     .collect(),
             ),
-            nom::Err::Failure(e) => LoadError::ParseFailureVerbose(
+            nom::Err::Failure(e) => Error::ParseFailureVerbose(
                 e.errors
                     .into_iter()
                     .map(|e| (e.1, e.0.input_len()))
@@ -73,8 +73,8 @@ impl<I: InputLength> From<nom::Err<VerboseError<I>>> for LoadError {
     }
 }
 
-impl From<Cow<'_, str>> for LoadError {
+impl From<Cow<'_, str>> for Error {
     fn from(e: Cow<'_, str>) -> Self {
-        LoadError::StringEncoding(String::from(e))
+        Error::StringEncoding(String::from(e))
     }
 }

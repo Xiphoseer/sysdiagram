@@ -1,8 +1,12 @@
 #![allow(clippy::upper_case_acronyms)]
 //! # Data definitions for sysdiagrams
-use ms_oforms::properties::Size;
+use ms_oforms::properties::{Position, Size};
+use uuid::Uuid;
 
-use crate::{dds::Polyline, DSRefSchemaContents};
+use crate::{
+    dds::{Label, Polyline},
+    DSRefSchemaContents,
+};
 
 /// ## SchGrid Control
 ///
@@ -40,6 +44,21 @@ pub struct SchGrid {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub(crate) struct SchGridInner(pub(crate) Vec<u32>);
+
+#[derive(Debug)]
+pub struct SiteInfo {
+    pub id: i32,
+    pub pos: Position,
+    pub tooltip: String,
+}
+
+#[derive(Debug)]
+pub enum Control {
+    SchGrid(SchGrid),
+    Label(Label),
+    Polyline(Polyline),
+    Unknown(Uuid),
+}
 
 #[derive(Debug)]
 pub struct Table {
