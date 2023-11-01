@@ -13,7 +13,7 @@ readme = "README.md"
 cli = ["dep:anyhow", "dep:mapr", "dep:argh"]
 
 [dependencies]
-ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "921c176"}
+ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "e1b9bce"}
 base64 = "0.21"
 cfb = "0.9"
 encoding_rs = "0.8"
@@ -26,6 +26,8 @@ bitflags = "2.4.1"
 nom = "7"
 bstr = "1.7.0"
 uuid = "1.5.0"
+num-traits = "0.2.17"
+num-derive = "0.4.1"
 
 [[bin]]
 name = "sysdiagram"

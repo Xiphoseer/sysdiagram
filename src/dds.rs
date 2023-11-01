@@ -25,6 +25,8 @@ use nom::{
     number::complete::{le_u16, le_u32, le_u8},
     IResult,
 };
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use std::borrow::Cow;
 use uuid::{uuid, Uuid};
 
@@ -50,24 +52,48 @@ pub const TYPELIB_DDS_FORM: Uuid = uuid!("105b80d0-95f1-11d0-b0a0-00aa00bdcb5c")
 /// Microsoft DT DDSform 2.1 FormPackage
 pub const CLSID_DDS2_FORM_PACKAGE: Uuid = uuid!("105b80d5-95f1-11d0-b0a0-00aa00bdcb5c");
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
+pub enum DdsPolylineEndType {
+    Many = 0,
+    LittleNub = 1,
+    Key = 2,
+    SingleArrowFill = 3,
+    DoubleArrow = 4,
+    RoundNub = 5,
+    None = 6,
+    OpenArrow = 7,
+    SingleArrow = 8,
+    Diamond = 9,
+    DiamondFill = 10,
+    DiamondArrow = 11,
+    DiamondFillArrow = 12,
+    ManyDelete = 13,
+    ManyUpdate = 14,
+    ManyUpdateDelete = 15,
+    KeyDelete = 16,
+    KeyUpdate = 17,
+    KeyUpdateDelete = 18,
+    Custom = 99,
+}
+
+/// ## Polyline
+///
+/// See also: <https://wutils.com/com-dll/constants/constants-MSDDS.htm>
 #[derive(Debug)]
 pub struct Polyline {
-    pub d1: u16,
+    pub _d1: u16, // 11 ? dpetDiamondArrow ?
     pub positions: Vec<Position>,
-    pub(crate) _d2: u32,
-    pub(crate) _d3: u32,
+    pub end_type_src: DdsPolylineEndType,  // 0 (dpetMany ?)
+    pub end_type_dest: DdsPolylineEndType, // 2 (dlotConnector ?, dbvUIActiveVisible ? dpcetsRect ? dpcetcsLineColor ? dpetKey ?)
     pub color: OleColor,
-    pub(crate) _x1: BString,
-    pub(crate) _d4: u32,
+    pub(crate) _x1: BString, // (16) GUID NIL?, Color Black?
+    pub(crate) _d4: u32,     // 1
     pub label_id: u32,
-    pub(crate) _x2: BString,
+    pub(crate) _x2: BString, // 0
     pub label_pos: Position,
     pub label_size: Size,
-    _d7: u8,
-    //pub(crate) _d7: i32,
-    //pub d8: [u8; 6],
-    //pub d9: u32,
-    pub(crate) _rest: BString,
+    pub(crate) _d7: u8,        // 0b0011_1111 flags ??
+    pub(crate) _rest: BString, // "\0\0\0\x01\0"
 }
 
 #[derive(Debug)]
@@ -162,10 +188,10 @@ where
 // - <https://wutils.com/com-dll/constants/constants-VBDataViewSupport.htm>
 pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, pos_count) = le_u16(input)?;
-    let (input, d1) = le_u16(input)?;
+    let (input, _d1) = le_u16(input)?;
     let (input, positions) = count(parse_position, usize::from(pos_count))(input)?;
-    let (input, _d2) = le_u32(input)?;
-    let (input, _d3) = le_u32(input)?;
+    let (input, end_type_src) = map_opt(le_u32, DdsPolylineEndType::from_u32)(input)?;
+    let (input, end_type_dest) = map_opt(le_u32, DdsPolylineEndType::from_u32)(input)?;
     let (input, color) = parse_ole_color(input)?;
     let (input, _x1) = map(take(16usize), BString::from)(input)?;
     let (input, _d4) = le_u32(input)?;
@@ -180,10 +206,10 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     Ok((
         input,
         Polyline {
-            d1,
+            _d1,
             positions,
-            _d2,
-            _d3,
+            end_type_src,
+            end_type_dest,
             color,
             _x1,
             _d4,
