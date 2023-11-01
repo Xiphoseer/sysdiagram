@@ -31,7 +31,7 @@ mod io;
 use dds::Label;
 pub use io::*;
 mod parser;
-use ms_oforms::{controls::form::FormControl, OFormsFile};
+use ms_oforms::{controls::user_form::FormControl, OFormsFile};
 use nom::error::VerboseError;
 pub use parser::*;
 mod connection_string;
@@ -109,69 +109,72 @@ impl<T: Read + Seek> SysDiagramFile<T> {
     }
 
     pub fn schema_form(&mut self) -> Result<SchemaForm, LoadError> {
-        eprintln!("Parsing FormControl");
-        let form_control = self.root_form_control().map_err(LoadError::Cfb)?;
-        println!("{:?}", form_control.displayed_size);
-
-        eprintln!("Parsing Objects");
-        if self.is_stream("/o") {
-            let mut form = self.root_form().map_err(LoadError::Cfb)?;
-            let mut iter = form.site_iter();
-
-            let mut tables = Vec::new();
-            let mut relationships = Vec::new();
-            let mut labels = Vec::new();
-
-            let mut buf = Vec::<u8>::new();
-            let mut _i = 0;
-            while let Some((clsid, ole_site)) = iter.next() {
-                let site_len = ole_site.object_stream_size as usize;
-                let caption = ole_site.control_tip_text.clone();
-
-                buf.truncate(0); // reset len, keep capacity
-                buf.reserve(site_len);
-                let mut s = iter.site_stream().map_err(LoadError::Cfb)?;
-                s.read_to_end(&mut buf)?;
-                let data = &buf[..];
-
-                //println!("{:>3} (len: {:>4}) {}: {} ", i, site_len, clsid, caption);
-                //println!("{:?}", ole_site.site_position);
-                match clsid {
-                    CLSID_SCHGRID => {
-                        // Table
-                        let (_, sch_grid) = parser::parse_sch_grid(data)?;
-                        tables.push(Table {
-                            _index: _i,
-                            sch_grid,
-                            caption,
-                        });
-                    }
-                    CLSID_POLYLINE => {
-                        // Foreign Key
-                        let (_, control) = parse_polyline(data)?;
-                        let (_, (name, from, to)) = parser::parse_relationship(&caption[..])?;
-                        relationships.push(Relationship {
-                            _index: _i,
-                            control,
-                            caption,
-                            name,
-                            from,
-                            to,
-                        });
-                    }
-                    CLSID_DDSLABEL => {
-                        let (_, label) = parse_label::<nom::error::Error<_>>(data)?;
-                        labels.push(label);
-                    }
-                    _ => eprintln!("Unknown clsid: {}", clsid),
-                }
-
-                _i += 1;
-            }
-            Ok((form_control, tables, relationships, labels))
-        } else {
-            Err(LoadError::MissingStream("o"))
+        if !self.is_stream("/f") {
+            return Err(LoadError::MissingStream("f"));
         }
+        eprintln!("Parsing FormControl");
+        let mut form = self.root_form().map_err(LoadError::Cfb)?;
+        println!("{:?}", form.form_control().displayed_size);
+
+        if !self.is_stream("/o") {
+            return Err(LoadError::MissingStream("o"));
+        }
+        eprintln!("Parsing Objects");
+
+        let mut iter = form.site_iter();
+
+        let mut tables = Vec::new();
+        let mut relationships = Vec::new();
+        let mut labels = Vec::new();
+
+        let mut buf = Vec::<u8>::new();
+        let mut _i = 0;
+        while let Some((clsid, ole_site)) = iter.next() {
+            let site_len = ole_site.object_stream_size as usize;
+            let caption = ole_site.control_tip_text.clone();
+
+            buf.truncate(0); // reset len, keep capacity
+            buf.reserve(site_len);
+            let mut s = iter.site_stream().map_err(LoadError::Cfb)?;
+            s.read_to_end(&mut buf)?;
+            let data = &buf[..];
+
+            //println!("{:>3} (len: {:>4}) {}: {} ", i, site_len, clsid, caption);
+            //println!("{:?}", ole_site.site_position);
+            match clsid {
+                CLSID_SCHGRID => {
+                    // Table
+                    let (_, sch_grid) = parser::parse_sch_grid(data)?;
+                    tables.push(Table {
+                        _index: _i,
+                        sch_grid,
+                        caption,
+                    });
+                }
+                CLSID_POLYLINE => {
+                    // Foreign Key
+                    let (_, control) = parse_polyline(data)?;
+                    let (_, (name, from, to)) = parser::parse_relationship(&caption[..])?;
+                    relationships.push(Relationship {
+                        _index: _i,
+                        control,
+                        caption,
+                        name,
+                        from,
+                        to,
+                    });
+                }
+                CLSID_DDSLABEL => {
+                    let (_, label) = parse_label::<nom::error::Error<_>>(data)?;
+                    labels.push(label);
+                }
+                _ => eprintln!("Unknown clsid: {}", clsid),
+            }
+
+            _i += 1;
+        }
+        let form_control = form.into_form_control();
+        Ok((form_control, tables, relationships, labels))
     }
 }
 
