@@ -20,6 +20,9 @@
 //! technology. *DDS* in this case stands for [*DaVinci Diagram Surface*][`dds`], which is a set of OLE
 //! Controls originating in Visual Studio.
 //!
+//! ## Preview
+//!
+//! ![Database Diagram](https://raw.githubusercontent.com/Xiphoseer/sysdiagram/ad596ad4e17bf25e6e004a212c1d12d03c97f28e/res/dv3w7c1.gif)
 
 mod core;
 pub use core::*;
