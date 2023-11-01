@@ -10,8 +10,7 @@
 //! - <http://sqlsoundings.blogspot.com/2011/10/ssis-word-wrapping-annotations-using.html>
 //! - <https://www.sqlservercentral.com/articles/hidden-ssis-features-word-wrapping-your-annotations-and-more>
 
-use std::borrow::Cow;
-
+use bitflags::bitflags;
 use bstr::BString;
 use ms_oforms::properties::{
     color::{parse_ole_color, OleColor},
@@ -20,12 +19,13 @@ use ms_oforms::properties::{
 };
 use nom::{
     bytes::complete::take,
-    combinator::{map, rest},
+    combinator::{map, map_opt, rest},
     error::{FromExternalError, ParseError},
     multi::count,
     number::complete::{le_u16, le_u32},
     IResult,
 };
+use std::borrow::Cow;
 use uuid::{uuid, Uuid};
 
 use crate::parse_u16_wstring;
@@ -68,15 +68,49 @@ pub struct Polyline {
 
 #[derive(Debug)]
 pub struct Label {
-    pub(crate) _d1: u32,
+    pub(crate) _d1: u32, // 0x02 = label pos type?
     pub size: Size,
-    pub(crate) _d2: BString,
+    pub(crate) _d2: BString, // 0x02 = label pos type?
     pub back_color: OleColor,
     pub fore_color: OleColor,
-    pub(crate) _d3: u32,
-    pub(crate) _flags: u16,
+    pub justification: LabelJustification,
+    pub(crate) _d3: u16,
+    pub flags: LabelFlags,
     pub font: StdFont,
     pub text: String,
+}
+
+bitflags! {
+    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+    pub struct LabelFlags: u16 {
+        const READ_ONLY = 0b000001;
+        const ALIGN_TOP = 0b000010; // vertical center = off
+        const AUTO_SIZE = 0b000100;
+        const DELETE_EMPTY = 0b001000;
+        const WORD_WRAP = 0b010000;
+        const TRANSPARENT = 0b100000;
+    }
+}
+
+/// Horizontal Justification on the label
+///
+/// See: <https://wutils.com/com-dll/constants/constants-DDSLibrary.htm>
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LabelJustification {
+    Left = 0,
+    Center = 1,
+    Right = 2,
+}
+
+impl LabelJustification {
+    pub fn from_u16(v: u16) -> Option<Self> {
+        match v {
+            0 => Some(LabelJustification::Left),
+            1 => Some(LabelJustification::Center),
+            2 => Some(LabelJustification::Right),
+            _ => None,
+        }
+    }
 }
 
 pub fn parse_label<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Label, E>
@@ -91,8 +125,9 @@ where
     let (input, _d2) = map(take(6usize), BString::from)(input)?;
     let (input, back_color) = parse_ole_color(input)?;
     let (input, fore_color) = parse_ole_color(input)?;
-    let (input, _d3) = le_u32(input)?;
-    let (input, _flags) = le_u16(input)?;
+    let (input, justification) = map_opt(le_u16, LabelJustification::from_u16)(input)?;
+    let (input, _d3) = le_u16(input)?;
+    let (input, flags) = map_opt(le_u16, LabelFlags::from_bits)(input)?;
     let (input, font) = parse_std_font(input)?;
     let (input, text) = parse_u16_wstring(input)?;
     Ok((
@@ -103,8 +138,9 @@ where
             _d2,
             back_color,
             fore_color,
+            justification,
             _d3,
-            _flags,
+            flags,
             font,
             text,
         },
