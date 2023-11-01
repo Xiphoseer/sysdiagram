@@ -52,17 +52,18 @@ pub const CLSID_DDS2_FORM_PACKAGE: Uuid = uuid!("105b80d5-95f1-11d0-b0a0-00aa00b
 
 #[derive(Debug)]
 pub struct Polyline {
-    //pub pos: Position,
     pub d1: u16,
     pub positions: Vec<Position>,
     pub(crate) _d2: u32,
     pub(crate) _d3: u32,
-    pub(crate) _color: OleColor,
+    pub color: OleColor,
     pub(crate) _x1: BString,
     pub(crate) _d4: u32,
     pub label_id: u32,
-    //pub d6: u32,
-    //pub d7: u32,
+    pub(crate) _x2: BString,
+    pub(crate) _pos: Position,
+    pub label_width: u32,
+    //pub(crate) _d7: i32,
     //pub d8: [u8; 6],
     //pub d9: u32,
     pub(crate) _rest: BString,
@@ -164,31 +165,31 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, positions) = count(parse_position, usize::from(pos_count))(input)?;
     let (input, _d2) = le_u32(input)?;
     let (input, _d3) = le_u32(input)?;
-    let (input, _color) = parse_ole_color(input)?;
+    let (input, color) = parse_ole_color(input)?;
     let (input, _x1) = map(take(16usize), BString::from)(input)?;
     let (input, _d4) = le_u32(input)?;
     let (input, label_id) = le_u32(input)?;
-    /*let (input, pos) = parse_position(input)?;
-    let (input, d6) = le_u32(input)?;
-    let (input, d7) = le_u32(input)?;
-    let (input, _d8) = take(6usize)(input)?;
+    let (input, _x2) = map(take(4usize), BString::from)(input)?;
+    let (input, _pos) = parse_position(input)?;
+    let (input, _d5) = le_u32(input)?;
+    /*let (input, _d8) = take(6usize)(input)?;
     let (input, d9) = le_u32(input)?;*/
     let (input, _rest) = map(rest, BString::from)(input)?;
     Ok((
         input,
         Polyline {
-            //pos,
             d1,
             positions,
             _d2,
             _d3,
-            _color,
+            color,
             _x1,
             _d4,
             label_id,
-            /*d6,
-            d7,
-            d8, d9,*/
+            _x2,
+            _pos,
+            label_width: _d5,
+            /*d8, d9,*/
             _rest,
         },
     ))
