@@ -48,6 +48,7 @@ pub(crate) struct SchGridInner(pub(crate) Vec<u32>);
 #[derive(Debug)]
 pub struct SiteInfo {
     pub id: i32,
+    pub depth: u8,
     pub pos: Position,
     pub tooltip: String,
 }

@@ -127,7 +127,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
         let mut controls = Vec::new();
 
         let mut buf = Vec::<u8>::new();
-        while let Some((clsid, ole_site)) = iter.next() {
+        while let Some((clsid, depth, ole_site)) = iter.next() {
             let site_len = ole_site.object_stream_size as usize;
 
             buf.truncate(0); // reset len, keep capacity
@@ -162,6 +162,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
             controls.push((
                 SiteInfo {
                     id: ole_site.id,
+                    depth,
                     pos: ole_site.site_position,
                     tooltip: ole_site.control_tip_text.clone(),
                 },
