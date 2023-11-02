@@ -115,7 +115,6 @@ impl<T: Read + Seek> SysDiagramFile<T> {
         }
         eprintln!("Parsing FormControl");
         let mut form = self.root_form().map_err(Error::Cfb)?;
-        println!("{:?}", form.form_control().displayed_size);
 
         if !self.is_stream("/o") {
             return Err(Error::MissingStream("o"));

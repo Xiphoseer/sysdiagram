@@ -29,6 +29,10 @@ struct Options {
     form: bool,
 
     #[argh(switch)]
+    /// print form size
+    size: bool,
+
+    #[argh(switch)]
     /// print cfb streams
     streams: bool,
 
@@ -47,6 +51,10 @@ struct Options {
     #[argh(switch)]
     /// print label
     labels: bool,
+
+    #[argh(switch)]
+    /// print \0CompObj info
+    comp_obj: bool,
 }
 
 fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
@@ -79,7 +87,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     }
 
     let comp_obj = reader.root_comp_obj()?;
-    println!("{:?}", comp_obj);
+    if opts.comp_obj {
+        println!("{:?}", comp_obj);
+    }
 
     eprintln!("Parsing DSREF-SCHEMA-CONTENT");
     let dsref_schema_contents = reader.dsref_schema_contents()?;
@@ -104,6 +114,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     if opts.form {
         println!("{:#?}", form_control);
     }
+    if opts.size {
+        println!("{:?}", form_control.displayed_size);
+    }
     if opts.classes {
         for c in form_control.site_classes {
             println!("- {:?}", c);
@@ -119,7 +132,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         println!("==> {:?}", site);
         match control {
             Control::SchGrid(sch_grid) => {
-                println!("{:?}", sch_grid);
+                println!("{:?}", sch_grid.a);
+                println!("{:?}", sch_grid.b);
+                println!("{:?}", sch_grid.c);
             }
             Control::Label(label) => {
                 println!("{:?}", label);
