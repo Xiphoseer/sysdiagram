@@ -117,7 +117,7 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
             d5_2,
             d5_3,
             d6,
-            d7: _d7,
+            _d7,
             size2,
             d8_0,
             col_count,

@@ -24,7 +24,7 @@ pub struct SchGrid {
     pub(crate) d5_2: (u32, u32), // pos/size?
     pub(crate) d5_3: (u32, u32),
     pub(crate) d6: u32,
-    pub(crate) d7: Vec<u32>,
+    pub(crate) _d7: Vec<u32>,
     pub(crate) size2: Size,
     pub(crate) d8_0: u32,
     pub col_count: u32,

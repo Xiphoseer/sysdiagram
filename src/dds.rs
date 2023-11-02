@@ -81,7 +81,7 @@ pub enum DdsPolylineEndType {
 /// See also: <https://wutils.com/com-dll/constants/constants-MSDDS.htm>
 #[derive(Debug)]
 pub struct Polyline {
-    pub _d1: u16, // 11 ? dpetDiamondArrow ?
+    pub(crate) _d1: u16, // 11 ? dpetDiamondArrow ?
     pub positions: Vec<Position>,
     pub end_type_src: DdsPolylineEndType,  // 0 (dpetMany ?)
     pub end_type_dest: DdsPolylineEndType, // 2 (dlotConnector ?, dbvUIActiveVisible ? dpcetsRect ? dpcetcsLineColor ? dpetKey ?)
