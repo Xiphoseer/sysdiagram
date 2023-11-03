@@ -1,8 +1,11 @@
 use anyhow::Context;
 use mapr::Mmap;
+use ms_oforms::properties::color::{OleColor, RgbColor};
+use ms_oforms::properties::{Position, Size};
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::{fs::File, time::UNIX_EPOCH};
+use sysdiagram::dds::DdsPolylineEndType;
 use sysdiagram::{get_settings, Control, Error, SysDiagramFile};
 
 #[derive(argh::FromArgs)]
@@ -55,6 +58,23 @@ struct Options {
     #[argh(switch)]
     /// print \0CompObj info
     comp_obj: bool,
+
+    #[argh(switch)]
+    /// generate SVG
+    svg: bool,
+}
+
+fn color(r: OleColor) -> RgbColor {
+    match r {
+        OleColor::Default(d) | OleColor::RgbColor(d) => d,
+        OleColor::SystemPalette(p) => {
+            let color = p
+                .as_system_color()
+                .expect("expected well-known system palette index");
+            RgbColor::from(color)
+        }
+        OleColor::PaletteEntry(e) => todo!("{:?}", e),
+    }
 }
 
 fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
@@ -71,7 +91,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
 
     let mut reader = SysDiagramFile::open(cursor).map_err(Error::Cfb)?;
 
-    if opts.streams {
+    if opts.streams && !opts.svg {
         let root = reader.root_entry();
         let ctime = root.created().duration_since(UNIX_EPOCH);
         let mtime = root.modified().duration_since(UNIX_EPOCH);
@@ -87,13 +107,13 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     }
 
     let comp_obj = reader.root_comp_obj()?;
-    if opts.comp_obj {
+    if opts.comp_obj && !opts.svg {
         println!("{:?}", comp_obj);
     }
 
     eprintln!("Parsing DSREF-SCHEMA-CONTENT");
     let dsref_schema_contents = reader.dsref_schema_contents()?;
-    if opts.settings {
+    if opts.settings && !opts.svg {
         if let Ok(settings) = get_settings(dsref_schema_contents.root_node.name.as_ref().unwrap()) {
             for (key, value) in &settings {
                 println!("{:25}: {}", key, value);
@@ -105,17 +125,140 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
             );
         }
     }
-    if opts.dsref {
+    if opts.dsref && !opts.svg {
         println!("time: {}", dsref_schema_contents.get_time());
         println!("{:#?}", dsref_schema_contents);
     }
 
     let (form_control, controls) = reader.schema_form()?;
+
+    if opts.svg {
+        let title = dsref_schema_contents.root_node.children[0]
+            .name
+            .as_deref()
+            .unwrap();
+        println!(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
+        println!(r#"<svg xmlns="http://www.w3.org/2000/svg""#);
+        println!(r#"    xmlns:xlink="http://www.w3.org/1999/xlink""#);
+        println!(r#"    version="1.1" baseProfile="full""#);
+
+        let min_x = controls.iter().map(|(s, _)| s.pos.top).min().unwrap() as f32 / 100.0;
+        let min_y = controls.iter().map(|(s, _)| s.pos.left).min().unwrap() as f32 / 100.0;
+
+        let (f_width, f_height) = size_himetric_to_mm(form_control.logical_size);
+        println!(r#"    width="{}mm" height="{}mm""#, f_width, f_height);
+        println!(
+            r#"    viewBox="{} {} {} {}""#,
+            min_x - 10.0,
+            min_y - 10.0,
+            f_width,
+            f_height
+        );
+        println!(
+            r#"    style="background-color: {}""#,
+            color(form_control.back_color)
+        );
+        println!(">");
+        println!(r#"    <title>{}</title>"#, title);
+        println!(r#"    <desc>Beschreibung/Textalternative zum Inhalt.</desc>"#);
+
+        println!(r#"<circle cx="0" cy="0" r="4" fill="red" />"#);
+
+        for (site, control) in controls {
+            let (x, y) = pos_himetric_to_mm_rev(&site.pos);
+            match control {
+                Control::SchGrid(sch_grid) => {
+                    println!(r#"<circle cx="{}" cy="{}" r="2" fill="blue" />"#, x, y);
+                    let _size = sch_grid.b._d5_2;
+                    let size1 = sch_grid.a.size1;
+                    let (w, h) = size_himetric_to_mm(size1);
+                    println!(
+                        r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="1" fill="none" />"#,
+                        x, y, w, h, "red"
+                    );
+                    let (w2, h2) = size_himetric_to_mm(_size);
+                    println!(
+                        r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
+                        x, y, w2, h2, "purple"
+                    );
+
+                    println!(
+                        r#"<text x="{}" y="{}" font-size="4" font-family="Tahoma">{}</text>"#,
+                        x + 2.0,
+                        y + 6.0,
+                        sch_grid.b.name
+                    );
+                }
+                Control::Label(label) => {
+                    println!(r#"<circle cx="{}" cy="{}" r="2" fill="red" />"#, x, y);
+                    let (width, height) = size_himetric_to_mm(label.size);
+                    let bg_rgb = color(label.back_color);
+                    let fg_rgb = color(label.fore_color);
+                    println!(
+                        r#"<rect x="{}" y="{}" width="{}" height="{}" fill="{}" />"#,
+                        x, y, width, height, bg_rgb,
+                    );
+                    println!(
+                        r#"<text font-family="{}" color="{}" font-size="{}" id="c{}" x="{}" y="{}">{}</text>"#,
+                        label.font.font_face,
+                        fg_rgb,
+                        8.25 * 0.35,
+                        site.id,
+                        x,
+                        y + height * 0.8,
+                        label.text
+                    );
+                }
+                Control::Polyline(line) => {
+                    println!(r#"<circle cx="{}" cy="{}" r="2" fill="green" />"#, x, y);
+                    let (lx, ly) = pos_himetric_to_mm_rev(&line.label_pos);
+                    println!(r#"<circle cx="{}" cy="{}" r="4" fill="cyan" />"#, lx, ly);
+                    print!(
+                        r#"<polyline stroke-width="1" id="c{}" fill="none" stroke="{}" points=""#,
+                        site.id,
+                        color(line.color),
+                    );
+                    fn cap_color(cap: DdsPolylineEndType) -> &'static str {
+                        match cap {
+                            DdsPolylineEndType::Many => "yellow",
+                            DdsPolylineEndType::Key => "orange",
+                            _ => "black",
+                        }
+                    }
+                    for p in &line.positions {
+                        let (x, y) = pos_himetric_to_mm_rev(p);
+                        print!("{},{} ", x, y);
+                    }
+                    println!("\" />");
+                    let color_src = cap_color(line.end_type_src);
+                    let color_dest = cap_color(line.end_type_dest);
+
+                    let (x_src, y_src) = pos_himetric_to_mm_rev(line.positions.first().unwrap());
+                    let (x_dest, y_dest) = pos_himetric_to_mm_rev(line.positions.last().unwrap());
+                    print!(
+                        r#"<circle cx="{}" cy="{}" r="2" fill="{}" />"#,
+                        x_src, y_src, color_src
+                    );
+                    print!(
+                        r#"<circle cx="{}" cy="{}" r="2" fill="{}" />"#,
+                        x_dest, y_dest, color_dest
+                    );
+                }
+                Control::Unknown(_) => {}
+            }
+        }
+
+        println!("</svg>");
+        return Ok(());
+    }
+
     if opts.form {
         println!("{:#?}", form_control);
     }
     if opts.size {
-        println!("{:?}", form_control.displayed_size);
+        println!("logical: {:?}", form_control.logical_size);
+        println!("displayed: {:?}", form_control.displayed_size);
+        println!("scroll: {:?}", form_control.scroll_position);
     }
     if opts.classes {
         for c in form_control.site_classes {
@@ -152,6 +295,22 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         }
     }
     Ok(())
+}
+
+fn _pos_himetric_to_mm(p: &Position) -> (f32, f32) {
+    (p.left as f32 / 100.0, p.top as f32 / 100.0)
+}
+
+fn pos_himetric_to_mm_rev(p: &Position) -> (f32, f32) {
+    (p.top as f32 / 100.0, p.left as f32 / 100.0)
+}
+
+fn size_himetric_to_mm(size: Size) -> (f32, f32) {
+    (size.width as f32 / 100.0, size.height as f32 / 100.0)
+}
+
+fn _size_himetric_to_mm_rev(size: Size) -> (f32, f32) {
+    (size.height as f32 / 100.0, size.width as f32 / 100.0)
 }
 
 pub fn main() -> Result<(), anyhow::Error> {

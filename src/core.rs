@@ -30,7 +30,7 @@ pub struct SchGridB {
     pub(crate) _d4: u32,
     pub name: String,
     pub(crate) _d5_1: (u32, u32),
-    pub(crate) _d5_2: Size, // scroll container size? width bigger, height smaller (or exact, or both bigger)
+    pub _d5_2: Size, // scroll container size? width bigger, height smaller (or exact, or both bigger)
     pub(crate) _d5_3: (u32, u32),
     pub(crate) _d6: u32,
     pub(crate) _d7: Vec<u32>,
