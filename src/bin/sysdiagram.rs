@@ -176,11 +176,11 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                         r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="1" fill="none" />"#,
                         x, y, w, h, "red"
                     );
-                    let (w2, h2) = size_himetric_to_mm(_size);
+                    /*let (w2, h2) = size_himetric_to_mm(_size);
                     println!(
                         r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
                         x, y, w2, h2, "purple"
-                    );
+                    );*/
 
                     println!(
                         r#"<text x="{}" y="{}" font-size="4" font-family="Tahoma">{}</text>"#,
