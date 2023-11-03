@@ -62,6 +62,10 @@ struct Options {
     #[argh(switch)]
     /// generate SVG
     svg: bool,
+
+    #[argh(switch)]
+    /// enable SVG visual debug nodes
+    debug: bool,
 }
 
 fn color(r: OleColor) -> RgbColor {
@@ -168,7 +172,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
             let (x, y) = pos_himetric_to_mm_rev(&site.pos);
             match control {
                 Control::SchGrid(sch_grid) => {
-                    println!(r#"<circle cx="{}" cy="{}" r="2" fill="blue" />"#, x, y);
+                    if opts.debug {
+                        println!(r#"<circle cx="{}" cy="{}" r="2" fill="blue" />"#, x, y);
+                    }
                     let _size = sch_grid.b._d5_2;
                     let size1 = sch_grid.a.size1;
                     let (w, h) = size_himetric_to_mm(size1);
@@ -176,11 +182,13 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                         r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="1" fill="none" />"#,
                         x, y, w, h, "red"
                     );
-                    /*let (w2, h2) = size_himetric_to_mm(_size);
-                    println!(
-                        r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
-                        x, y, w2, h2, "purple"
-                    );*/
+                    if opts.debug {
+                        let (w2, h2) = size_himetric_to_mm(_size);
+                        println!(
+                            r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
+                            x, y, w2, h2, "purple"
+                        );
+                    }
 
                     println!(
                         r#"<text x="{}" y="{}" font-size="4" font-family="Tahoma">{}</text>"#,
@@ -190,7 +198,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                     );
                 }
                 Control::Label(label) => {
-                    println!(r#"<circle cx="{}" cy="{}" r="2" fill="red" />"#, x, y);
+                    if opts.debug {
+                        println!(r#"<circle cx="{}" cy="{}" r="2" fill="red" />"#, x, y);
+                    }
                     let (width, height) = size_himetric_to_mm(label.size);
                     let bg_rgb = color(label.back_color);
                     let fg_rgb = color(label.fore_color);
@@ -210,9 +220,11 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                     );
                 }
                 Control::Polyline(line) => {
-                    println!(r#"<circle cx="{}" cy="{}" r="2" fill="green" />"#, x, y);
-                    let (lx, ly) = pos_himetric_to_mm_rev(&line.label_pos);
-                    println!(r#"<circle cx="{}" cy="{}" r="4" fill="cyan" />"#, lx, ly);
+                    if opts.debug {
+                        println!(r#"<circle cx="{}" cy="{}" r="2" fill="green" />"#, x, y);
+                        let (lx, ly) = pos_himetric_to_mm_rev(&line.label_pos);
+                        println!(r#"<circle cx="{}" cy="{}" r="4" fill="cyan" />"#, lx, ly);
+                    }
                     print!(
                         r#"<polyline stroke-width="1" id="c{}" fill="none" stroke="{}" points=""#,
                         site.id,
