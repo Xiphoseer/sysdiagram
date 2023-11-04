@@ -34,7 +34,9 @@ use std::{
 mod error;
 pub use error::*;
 mod parser;
-use ms_oforms::{controls::user_form::FormControl, OFormsFile};
+use ms_oforms::{
+    controls::user_form::FormControl, properties::FormEmbeddedActiveXControl, OFormsFile,
+};
 use nom::error::VerboseError;
 pub use parser::*;
 mod connection_string;
@@ -126,7 +128,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
         let mut controls = Vec::new();
 
         let mut buf = Vec::<u8>::new();
-        while let Some((clsid, depth, ole_site)) = iter.next() {
+        while let Some((ctrl_class, depth, ole_site)) = iter.next() {
             let site_len = ole_site.object_stream_size as usize;
 
             buf.truncate(0); // reset len, keep capacity
@@ -137,6 +139,10 @@ impl<T: Read + Seek> SysDiagramFile<T> {
 
             //println!("{:>3} (len: {:>4}) {}: {} ", i, site_len, clsid, caption);
             //println!("{:?}", ole_site.site_position);
+            let clsid = match ctrl_class {
+                FormEmbeddedActiveXControl::ControlNonCached(class_info) => class_info.cls_id,
+                FormEmbeddedActiveXControl::ControlCached(_) => unimplemented!(""),
+            };
             let control = match clsid {
                 CLSID_SCHGRID => {
                     // Table
