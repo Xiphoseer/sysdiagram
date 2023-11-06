@@ -14,15 +14,14 @@ use crate::{
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct SchGrid {
-    pub a: SchGridA,
+    pub extent: OleControlExtent,
     pub b: SchGridB,
     pub c: SchGridC,
 }
 
 #[derive(Debug)]
-pub struct SchGridA {
-    pub(crate) _d2: u32,
-    pub size1: Size,
+pub struct OleControlExtent {
+    pub size: Size,
 }
 
 #[derive(Debug)]

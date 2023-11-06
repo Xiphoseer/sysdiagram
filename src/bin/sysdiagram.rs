@@ -176,7 +176,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                         println!(r#"<circle cx="{}" cy="{}" r="2" fill="blue" />"#, x, y);
                     }
                     let _size = sch_grid.b._d5_2;
-                    let size1 = sch_grid.a.size1;
+                    let size1 = sch_grid.extent.size;
                     let (w, h) = size_himetric_to_mm(size1);
                     println!(
                         r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="1" fill="none" />"#,
@@ -287,7 +287,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         println!("==> {:?}", site);
         match control {
             Control::SchGrid(sch_grid) => {
-                println!("{:?}", sch_grid.a);
+                println!("{:?}", sch_grid.extent);
                 println!("{:?}", sch_grid.b);
                 println!("{:?}", sch_grid.c);
             }

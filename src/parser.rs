@@ -5,12 +5,12 @@ use nom::combinator::{map, map_opt, map_res, recognize};
 use nom::error::{FromExternalError, ParseError};
 use nom::multi::{count, length_value, many_till};
 use nom::number::complete::{le_u16, le_u32};
-use nom::sequence::pair;
+use nom::sequence::{pair, tuple};
 use nom::IResult;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
-use crate::{SchGrid, SchGridA, SchGridB, SchGridC, SchGridInner};
+use crate::{OleControlExtent, SchGrid, SchGridB, SchGridC, SchGridInner};
 
 fn decode_utf16(input: &[u8]) -> Option<String> {
     UTF_16LE
@@ -76,13 +76,24 @@ fn parse_sch_grid_inner(input: &[u8]) -> IResult<&[u8], SchGridInner> {
     Ok((input, SchGridInner(v1, size, v2)))
 }
 
-// See: <https://github.com/jandubois/win32-ole/blob/27570c90dcb3cf56ef815f668cc346dc0ac099a3/OLE.xs#L151>
-const WINOLE_MAGIC: u32 = 0x1234_4321;
+// See:
+// - <https://github.com/jandubois/win32-ole/blob/27570c90dcb3cf56ef815f668cc346dc0ac099a3/OLE.xs#L151>
+// - <https://github.com/LibreOffice/core/blob/b4e7ebebd583a2a3856231aead66d72d3bc1cb46/oox/source/ole/axcontrol.cxx#L722>
+const OLE_CONTROL_MAGIC: u32 = 0x1234_4321;
+
+// See: <https://github.com/LibreOffice/core/blob/b4e7ebebd583a2a3856231aead66d72d3bc1cb46/oox/source/ole/axcontrol.cxx#L720-L729>
+fn parse_ole_control_extent(input: &[u8]) -> IResult<&[u8], OleControlExtent> {
+    let (input, _) = tag(OLE_CONTROL_MAGIC.to_le_bytes())(input)?;
+    let (input, _) = tuple((
+        tag(u16::to_le_bytes(8)), // minor
+        tag(u16::to_le_bytes(0)), // major
+    ))(input)?;
+    let (input, size) = parse_size(input)?;
+    Ok((input, OleControlExtent { size }))
+}
 
 pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
-    let (input, _) = tag(WINOLE_MAGIC.to_le_bytes())(input)?;
-    let (input, d2) = le_u32(input)?;
-    let (input, size1) = parse_size(input)?;
+    let (input, extent) = parse_ole_control_extent(input)?;
     let (input, _) = tag(u32::to_le_bytes(0x1234_5678))(input)?;
     let (input, d4) = le_u32(input)?;
     let (input, name) = length_value(le_u32, parse_wstring_nt)(input)?;
@@ -116,7 +127,7 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
     Ok((
         input,
         SchGrid {
-            a: SchGridA { _d2: d2, size1 },
+            extent,
             b: SchGridB {
                 _d4: d4,
                 name,
