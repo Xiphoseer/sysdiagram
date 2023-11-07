@@ -1,4 +1,14 @@
 //! ## Microsoft Data Tools Database Designer
+//!
+//! Also known as the `SchGrid OLE Custom Control Module` (originally `Mdtsg.ocx`, v.1.00.00.2520,
+//! later `mdt2db.dll`) this ActiveX control library provided the central UI element
+//! of the Database Designer form, [`SchGrid`] (aka `MSDTDDGridCtrl2`).
+//!
+//! From the serialization and function names, it was likely an ActiveX component
+//! built with Microsoft Foundation Classes (MFC), with some the embedded window frame
+//! inheriting from `CFrameWnd`.
+//!
+//! See also: <http://www.dejadejadeja.com/detech/ocxdb/mdt2db.dll.txt.lisp>
 
 #![allow(clippy::upper_case_acronyms)]
 use crate::{le_u32_2, parse_u32_wstring_nt, parse_wstring_nt};
@@ -40,8 +50,6 @@ pub const CLSID_ISCHGRID: Uuid = uuid!("b27d32a0-62d8-4295-8d98-273c25a2da2d");
 pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("847f3bf4-617f-43c7-8535-2986e1d552f8");
 
 /// ## SchGrid Control
-///
-/// See: <http://www.dejadejadeja.com/detech/ocxdb/mdt2db.dll.txt.lisp>
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub struct SchGrid {
