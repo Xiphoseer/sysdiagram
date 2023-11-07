@@ -33,14 +33,14 @@ use std::{
 };
 mod error;
 pub use error::*;
+pub mod mdtdb;
 mod parser;
-pub mod schgrid;
+pub use mdtdb::SchGrid;
 use ms_oforms::{
     controls::user_form::FormControl, properties::FormEmbeddedActiveXControl, OFormsFile,
 };
 use nom::error::VerboseError;
 pub use parser::*;
-pub use schgrid::SchGrid;
 mod connection_string;
 pub mod dds;
 pub mod dsref;
@@ -49,7 +49,7 @@ use dsref::{parse_dsref_schema_contents, DSRefSchemaContents};
 
 use crate::{
     dds::{parse_label, parse_polyline, CLSID_DDSLABEL, CLSID_POLYLINE},
-    schgrid::{parse_sch_grid, CLSID_SCHGRID},
+    mdtdb::{parse_sch_grid, CLSID_SCHGRID},
 };
 
 const DSREF_SCHEMA_CONTENTS: &str = "/DSREF-SCHEMA-CONTENTS";

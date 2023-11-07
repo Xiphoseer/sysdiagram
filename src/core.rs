@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::{
     dds::{Label, Polyline},
-    schgrid::SchGrid,
+    mdtdb::SchGrid,
     DSRefSchemaContents,
 };
 
