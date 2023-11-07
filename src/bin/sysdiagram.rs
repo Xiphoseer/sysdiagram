@@ -176,7 +176,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                         println!(r#"<circle cx="{}" cy="{}" r="2" fill="blue" />"#, x, y);
                     }
                     let _size = sch_grid.b._d5_2;
-                    let size1 = sch_grid.extent.size;
+                    let size1 = sch_grid.extent;
                     let (w, h) = size_himetric_to_mm(size1);
                     println!(
                         r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="1" fill="none" />"#,

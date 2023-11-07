@@ -11,21 +11,16 @@ use crate::{
 /// ## SchGrid Control
 ///
 /// See: <http://www.dejadejadeja.com/detech/ocxdb/mdt2db.dll.txt.lisp>
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub struct SchGrid {
-    pub extent: OleControlExtent,
-    pub b: SchGridB,
-    pub c: SchGridC,
+    pub extent: Size,
+    pub b: GridFrameWnd,
+    pub c: DataSource,
 }
 
-#[derive(Debug)]
-pub struct OleControlExtent {
-    pub size: Size,
-}
-
-#[derive(Debug)]
-pub struct SchGridB {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GridFrameWnd {
     pub(crate) _d4: u32,
     pub name: String,
     pub(crate) _d5_1: (u32, u32),
@@ -43,8 +38,8 @@ pub struct SchGridB {
     pub(crate) _x2: Vec<u32>,
 }
 
-#[derive(Debug)]
-pub struct SchGridC {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataSource {
     pub(crate) _cd1: u32,
     pub(crate) _cd2: u32,
     pub(crate) _cd3: u32,
@@ -54,7 +49,7 @@ pub struct SchGridC {
     pub schema: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub(crate) struct SchGridInner(pub(crate) Vec<u32>, pub(crate) Size, pub(crate) Vec<u32>);
 

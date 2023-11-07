@@ -1,5 +1,5 @@
 use encoding_rs::UTF_16LE;
-use ms_oforms::properties::parse_size;
+use ms_oforms::properties::{parse_size, Size};
 use nom::bytes::complete::{tag, take, take_until};
 use nom::combinator::{map, map_opt, map_res, recognize};
 use nom::error::{FromExternalError, ParseError};
@@ -10,7 +10,7 @@ use nom::IResult;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
-use crate::{OleControlExtent, SchGrid, SchGridB, SchGridC, SchGridInner};
+use crate::{DataSource, GridFrameWnd, SchGrid, SchGridInner};
 
 fn decode_utf16(input: &[u8]) -> Option<String> {
     UTF_16LE
@@ -82,14 +82,12 @@ fn parse_sch_grid_inner(input: &[u8]) -> IResult<&[u8], SchGridInner> {
 const OLE_CONTROL_MAGIC: u32 = 0x1234_4321;
 
 // See: <https://github.com/LibreOffice/core/blob/b4e7ebebd583a2a3856231aead66d72d3bc1cb46/oox/source/ole/axcontrol.cxx#L720-L729>
-fn parse_ole_control_extent(input: &[u8]) -> IResult<&[u8], OleControlExtent> {
+fn parse_ole_control_extent(input: &[u8]) -> IResult<&[u8], Size> {
     let (input, _) = tag(OLE_CONTROL_MAGIC.to_le_bytes())(input)?;
-    let (input, _) = tuple((
-        tag(u16::to_le_bytes(8)), // minor
-        tag(u16::to_le_bytes(0)), // major
-    ))(input)?;
+    let (input, (v_minor, v_major)) = tuple((le_u16, le_u16))(input)?;
+    assert_eq!((v_minor, v_major), (8, 0));
     let (input, size) = parse_size(input)?;
-    Ok((input, OleControlExtent { size }))
+    Ok((input, size))
 }
 
 pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
@@ -128,7 +126,7 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
         input,
         SchGrid {
             extent,
-            b: SchGridB {
+            b: GridFrameWnd {
                 _d4: d4,
                 name,
                 _d5_1: d5_1,
@@ -143,7 +141,7 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
                 _x1: x1,
                 _x2: x2,
             },
-            c: SchGridC {
+            c: DataSource {
                 _cd1,
                 _cd2,
                 _cd3,
