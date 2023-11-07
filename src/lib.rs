@@ -34,19 +34,23 @@ use std::{
 mod error;
 pub use error::*;
 mod parser;
+pub mod schgrid;
 use ms_oforms::{
     controls::user_form::FormControl, properties::FormEmbeddedActiveXControl, OFormsFile,
 };
 use nom::error::VerboseError;
 pub use parser::*;
+pub use schgrid::SchGrid;
 mod connection_string;
 pub mod dds;
 pub mod dsref;
 pub use connection_string::*;
 use dsref::{parse_dsref_schema_contents, DSRefSchemaContents};
-use uuid::{uuid, Uuid};
 
-use crate::dds::{parse_label, parse_polyline, CLSID_DDSLABEL, CLSID_POLYLINE};
+use crate::{
+    dds::{parse_label, parse_polyline, CLSID_DDSLABEL, CLSID_POLYLINE},
+    schgrid::{parse_sch_grid, CLSID_SCHGRID},
+};
 
 const DSREF_SCHEMA_CONTENTS: &str = "/DSREF-SCHEMA-CONTENTS";
 
@@ -54,32 +58,6 @@ const DSREF_SCHEMA_CONTENTS: &str = "/DSREF-SCHEMA-CONTENTS";
 // See: http://pitcheploy.free.fr/Microsoft%20Visual%20Basic%206.0%20%C3%89dition%20Professionnelle%20(Fran%C3%A7ais)/HKEY_LOCAL_MACHINE.txt
 // See: https://gist.githubusercontent.com/stevemk14ebr/af8053c506ef895cd520f8017a81f913/raw/98944bc6ae995229d5231568a8ae73dd287e8b4f/guids
 // See: https://gist.githubusercontent.com/hfiref0x/a77584e47b0feb3779f47c8d7609d4c4/raw/0cedbcaee37c072c623c71c2b2ac03ab020592da/responder_comdata.txt
-
-/// `SchGrid OLE Custom Control module` (`mdt2db.dll`)
-pub const TYPELIB_SCHGRID: Uuid = uuid!("e9b0e6da-811c-11d0-ad51-00a0c90f5739");
-
-/// Microsoft Data Tools Database Designer
-pub const CLSID_MSDTDB_DESIGNER: Uuid = uuid!("e9b0e6d4-811c-11d0-ad51-00a0c90f5739");
-
-pub const PROGID_MSDTDB_DESIGNER: &str = "MSDTDatabaseDesigner2";
-/// Microsoft Data Tools Database Designer SQL Server Table Property Page
-pub const CLSID_MSDTDB_SQLSERVER_TABLE_PROPERTY_PAGE: Uuid =
-    uuid!("e9b0e6d5-811c-11d0-ad51-00a0c90f5739");
-/// Microsoft Data Tools Database Designer SQL Server Relationship Property Page
-pub const CLSID_MSDTDB_SQLSERVER_RELATIONSHIP_PROPERTY_PAGE: Uuid =
-    uuid!("e9b0e6d6-811c-11d0-ad51-00a0c90f5739");
-/// Microsoft Data Tools Database Designer SQL Server Index Property Page
-pub const CLSID_MSDTDB_SQLSERVER_INDEX_PROPERTY_PAGE: Uuid =
-    uuid!("e9b0e6d8-811c-11d0-ad51-00a0c90f5739");
-/// MSDTDDGridCtrl2 Object (ProgID `SchGrid.MSDTDDGridCtrl2.1`)
-pub const CLSID_SCHGRID: Uuid = uuid!("e9b0e6d9-811c-11d0-ad51-00a0c90f5739");
-
-pub const IID_ISCHGRID_ALT: Uuid = uuid!("91a88675-8bc8-11ce-9bfd-00aa0062bebf");
-pub const IID_DSCHGRID_EVENTS: Uuid = uuid!("91a88676-8bc8-11ce-9bfd-00aa0062bebf");
-pub const IID_CONTROL_EVENTS: Uuid = uuid!("77d2c934-7779-11d8-9070-00065b840d9c");
-
-pub const CLSID_ISCHGRID: Uuid = uuid!("b27d32a0-62d8-4295-8d98-273c25a2da2d");
-pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("847f3bf4-617f-43c7-8535-2986e1d552f8");
 
 pub struct SysDiagramFile<T> {
     inner: OFormsFile<T>,
@@ -146,7 +124,7 @@ impl<T: Read + Seek> SysDiagramFile<T> {
             let control = match clsid {
                 CLSID_SCHGRID => {
                     // Table
-                    let (_, sch_grid) = parser::parse_sch_grid(data)?;
+                    let (_, sch_grid) = parse_sch_grid(data)?;
                     Control::SchGrid(sch_grid)
                 }
                 CLSID_POLYLINE => {
