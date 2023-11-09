@@ -148,7 +148,7 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 [[package]]
 name = "ms-oforms"
 version = "0.3.0-alpha2"
-source = "git+https://github.com/Xiphoseer/rust-ms-oforms.git?rev=e70d10c#e70d10c308d9d7fb8381521c48a984abee749015"
+source = "git+https://github.com/Xiphoseer/rust-ms-oforms.git?rev=f939b8f#f939b8f842a02fa1d3f55349c8f97ed309676060"
 dependencies = [
  "bitflags",
  "cfb",

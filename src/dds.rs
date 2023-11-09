@@ -15,7 +15,7 @@ use bstr::BString;
 use ms_oforms::properties::{
     color::{parse_ole_color, OleColor},
     font::{parse_std_font, StdFont},
-    parse_position, parse_size, Position, Size,
+    Position, Size,
 };
 use nom::{
     bytes::complete::take,
@@ -150,7 +150,7 @@ where
     E: FromExternalError<&'a [u8], u32>,
 {
     let (input, _d1) = le_u32(input)?;
-    let (input, size) = parse_size(input)?;
+    let (input, size) = Size::parse(input)?;
 
     let (input, _d2) = map(take(6usize), BString::from)(input)?;
     let (input, back_color) = parse_ole_color(input)?;
@@ -189,7 +189,7 @@ where
 pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, pos_count) = le_u16(input)?;
     let (input, _d1) = le_u16(input)?;
-    let (input, positions) = count(parse_position, usize::from(pos_count))(input)?;
+    let (input, positions) = count(Position::parse, usize::from(pos_count))(input)?;
     let (input, end_type_src) = map_opt(le_u32, DdsPolylineEndType::from_u32)(input)?;
     let (input, end_type_dest) = map_opt(le_u32, DdsPolylineEndType::from_u32)(input)?;
     let (input, color) = parse_ole_color(input)?;
@@ -197,8 +197,8 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, _d4) = le_u32(input)?;
     let (input, label_id) = le_u32(input)?;
     let (input, _x2) = map(take(4usize), BString::from)(input)?;
-    let (input, _pos) = parse_position(input)?;
-    let (input, label_size) = parse_size(input)?;
+    let (input, _pos) = Position::parse(input)?;
+    let (input, label_size) = Size::parse(input)?;
     let (input, _d7) = le_u8(input)?;
     /*let (input, _d8) = take(6usize)(input)?;
     let (input, d9) = le_u32(input)?;*/

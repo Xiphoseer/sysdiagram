@@ -12,7 +12,6 @@
 
 #![allow(clippy::upper_case_acronyms)]
 use crate::{le_u32_2, parse_u32_wstring_nt, parse_wstring_nt};
-use ms_oforms::properties::parse_size;
 use ms_oforms::properties::Size;
 use nom::bytes::complete::tag;
 use nom::combinator::map_res;
@@ -94,7 +93,7 @@ pub(crate) struct SchGridInner(pub(crate) Vec<u32>, pub(crate) Size, pub(crate) 
 
 fn parse_sch_grid_inner(input: &[u8]) -> IResult<&[u8], SchGridInner> {
     let (input, v1) = count(le_u32, 6)(input)?;
-    let (input, size) = parse_size(input)?;
+    let (input, size) = Size::parse(input)?;
     let (input, v2) = count(le_u32, 3)(input)?;
     Ok((input, SchGridInner(v1, size, v2)))
 }
@@ -109,7 +108,7 @@ fn parse_ole_control_extent(input: &[u8]) -> IResult<&[u8], Size> {
     let (input, _) = tag(OLE_CONTROL_MAGIC.to_le_bytes())(input)?;
     let (input, (v_minor, v_major)) = pair(le_u16, le_u16)(input)?;
     assert_eq!((v_minor, v_major), (8, 0));
-    let (input, size) = parse_size(input)?;
+    let (input, size) = Size::parse(input)?;
     Ok((input, size))
 }
 
@@ -119,11 +118,11 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
     let (input, d4) = le_u32(input)?;
     let (input, name) = length_value(le_u32, parse_wstring_nt)(input)?;
     let (input, d5_1) = le_u32_2(input)?;
-    let (input, _d5_2) = parse_size(input)?;
+    let (input, _d5_2) = Size::parse(input)?;
     let (input, d5_3) = le_u32_2(input)?;
     let (input, d6) = le_u32(input)?;
     let (input, _d7) = count(le_u32, 16usize)(input)?;
-    let (input, size2) = parse_size(input)?;
+    let (input, size2) = Size::parse(input)?;
     let (input, d8_0) = le_u32(input)?;
     let (input, col_count) = le_u32(input)?;
     let (input, cols_shown) = le_u32(input)?;

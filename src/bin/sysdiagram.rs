@@ -146,8 +146,8 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         println!(r#"    xmlns:xlink="http://www.w3.org/1999/xlink""#);
         println!(r#"    version="1.1" baseProfile="full""#);
 
-        let min_x = controls.iter().map(|(s, _)| s.pos.top).min().unwrap() as f32 / 100.0;
-        let min_y = controls.iter().map(|(s, _)| s.pos.left).min().unwrap() as f32 / 100.0;
+        let min_x = controls.iter().map(|(s, _)| s.pos.left).min().unwrap() as f32 / 100.0;
+        let min_y = controls.iter().map(|(s, _)| s.pos.top).min().unwrap() as f32 / 100.0;
 
         let (f_width, f_height) = size_himetric_to_mm(form_control.logical_size);
         println!(r#"    width="{}mm" height="{}mm""#, f_width, f_height);
@@ -169,7 +169,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         println!(r#"<circle cx="0" cy="0" r="4" fill="red" />"#);
 
         for (site, control) in controls {
-            let (x, y) = pos_himetric_to_mm_rev(&site.pos);
+            let (x, y) = pos_himetric_to_mm(&site.pos);
             match control {
                 Control::SchGrid(sch_grid) => {
                     if opts.debug {
@@ -222,7 +222,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                 Control::Polyline(line) => {
                     if opts.debug {
                         println!(r#"<circle cx="{}" cy="{}" r="2" fill="green" />"#, x, y);
-                        let (lx, ly) = pos_himetric_to_mm_rev(&line.label_pos);
+                        let (lx, ly) = pos_himetric_to_mm(&line.label_pos);
                         println!(r#"<circle cx="{}" cy="{}" r="4" fill="cyan" />"#, lx, ly);
                     }
                     print!(
@@ -238,15 +238,15 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                         }
                     }
                     for p in &line.positions {
-                        let (x, y) = pos_himetric_to_mm_rev(p);
+                        let (x, y) = pos_himetric_to_mm(p);
                         print!("{},{} ", x, y);
                     }
                     println!("\" />");
                     let color_src = cap_color(line.end_type_src);
                     let color_dest = cap_color(line.end_type_dest);
 
-                    let (x_src, y_src) = pos_himetric_to_mm_rev(line.positions.first().unwrap());
-                    let (x_dest, y_dest) = pos_himetric_to_mm_rev(line.positions.last().unwrap());
+                    let (x_src, y_src) = pos_himetric_to_mm(line.positions.first().unwrap());
+                    let (x_dest, y_dest) = pos_himetric_to_mm(line.positions.last().unwrap());
                     print!(
                         r#"<circle cx="{}" cy="{}" r="2" fill="{}" />"#,
                         x_src, y_src, color_src
@@ -309,20 +309,12 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn _pos_himetric_to_mm(p: &Position) -> (f32, f32) {
+fn pos_himetric_to_mm(p: &Position) -> (f32, f32) {
     (p.left as f32 / 100.0, p.top as f32 / 100.0)
-}
-
-fn pos_himetric_to_mm_rev(p: &Position) -> (f32, f32) {
-    (p.top as f32 / 100.0, p.left as f32 / 100.0)
 }
 
 fn size_himetric_to_mm(size: Size) -> (f32, f32) {
     (size.width as f32 / 100.0, size.height as f32 / 100.0)
-}
-
-fn _size_himetric_to_mm_rev(size: Size) -> (f32, f32) {
-    (size.height as f32 / 100.0, size.width as f32 / 100.0)
 }
 
 pub fn main() -> Result<(), anyhow::Error> {
