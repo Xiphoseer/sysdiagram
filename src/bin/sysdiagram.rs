@@ -175,7 +175,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                     if opts.debug {
                         println!(r#"<circle cx="{}" cy="{}" r="2" fill="blue" />"#, x, y);
                     }
-                    let _size = sch_grid.b._d5_2;
+                    let _size = sch_grid.frame._d5_2;
                     let size1 = sch_grid.extent;
                     let (w, h) = size_himetric_to_mm(size1);
                     println!(
@@ -194,7 +194,7 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                         r#"<text x="{}" y="{}" font-size="4" font-family="Tahoma">{}</text>"#,
                         x + 2.0,
                         y + 6.0,
-                        sch_grid.b.name
+                        sch_grid.frame.name
                     );
                 }
                 Control::Label(label) => {
@@ -288,8 +288,8 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         match control {
             Control::SchGrid(sch_grid) => {
                 println!("{:?}", sch_grid.extent);
-                println!("{:?}", sch_grid.b);
-                println!("{:?}", sch_grid.c);
+                println!("{:?}", sch_grid.frame);
+                println!("{:?}", sch_grid.data_source);
             }
             Control::Label(label) => {
                 println!("{:?}", label);

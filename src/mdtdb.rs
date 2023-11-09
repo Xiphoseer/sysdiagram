@@ -10,16 +10,13 @@
 //!
 //! See also: <http://www.dejadejadeja.com/detech/ocxdb/mdt2db.dll.txt.lisp>
 
-#![allow(clippy::upper_case_acronyms)]
 use crate::{le_u32_2, parse_u32_wstring_nt, parse_wstring_nt};
 use ms_oforms::properties::Size;
 use nom::bytes::complete::tag;
-use nom::combinator::map_res;
-use nom::multi::{count, length_value};
+use nom::multi::{count, length_count, length_value};
 use nom::number::complete::{le_u16, le_u32};
 use nom::sequence::pair;
 use nom::IResult;
-use std::convert::TryFrom;
 use uuid::{uuid, Uuid};
 
 /// `SchGrid OLE Custom Control module` (`mdt2db.dll`)
@@ -53,8 +50,8 @@ pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("847f3bf4-617f-43c7-8535-2986e1d55
 #[allow(dead_code)]
 pub struct SchGrid {
     pub extent: Size,
-    pub b: GridFrameWnd,
-    pub c: DataSource,
+    pub frame: GridFrameWnd,
+    pub data_source: DataSource,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,7 +63,7 @@ pub struct GridFrameWnd {
     pub(crate) _d5_3: (u32, u32),
     pub(crate) _d6: u32,
     pub(crate) _d7: Vec<u32>,
-    pub(crate) _size2: Size,
+    pub size: Size,
     pub(crate) _d8_0: u32,
     pub col_count: u32,
     pub cols_shown: u32, // mostly min(col_count, 12)
@@ -78,8 +75,6 @@ pub struct GridFrameWnd {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataSource {
-    pub(crate) _cd1: u32,
-    pub(crate) _cd2: u32,
     pub(crate) _cd3: u32,
     pub(crate) _cd4: u32,
     pub(crate) _d14: Vec<u32>, // 0 - 10, selected columns?
@@ -112,6 +107,31 @@ fn parse_ole_control_extent(input: &[u8]) -> IResult<&[u8], Size> {
     Ok((input, size))
 }
 
+fn _parse_data_source(input: &[u8]) -> IResult<&[u8], DataSource> {
+    let (input, _cd3) = le_u32(input)?;
+    let (input, _cd4) = le_u32(input)?;
+    let (input, _d14) = length_count(le_u32, le_u32)(input)?;
+    let (input, schema) = parse_u32_wstring_nt(input)?;
+    let (input, table) = parse_u32_wstring_nt(input)?;
+    Ok((
+        input,
+        DataSource {
+            _cd3,
+            _cd4,
+            _d14,
+            schema,
+            table,
+        },
+    ))
+}
+
+fn parse_data_source(input: &[u8]) -> IResult<&[u8], DataSource> {
+    let (input, _) = tag(u32::to_le_bytes(0x1234_5678))(input)?;
+    let (input, (v_minor, v_major)) = pair(le_u16, le_u16)(input)?;
+    assert_eq!((v_minor, v_major), (4, 0));
+    length_value(le_u32, _parse_data_source)(input)
+}
+
 pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
     let (input, extent) = parse_ole_control_extent(input)?;
     let (input, _) = tag(u32::to_le_bytes(0x1234_5678))(input)?;
@@ -128,27 +148,13 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
     let (input, cols_shown) = le_u32(input)?;
     let (input, x1) = count(parse_sch_grid_inner, 3)(input)?;
     let (input, x2) = count(le_u32, 6usize)(input)?;
-    //let (input, _d8) = count(le_u32, 13usize)(input)?;
-    //let (input, d9) = le_u32(input)?;
-    //let (input, _d10) = count(le_u32, 8usize)(input)?;
-    //let (input, _d11) = take(8usize * 4)(input)?;
-    //let (input, d12) = le_u32(input)?;
-    //let (input, d13) = le_u32_2(input)?;
-    let (input, _) = tag(u32::to_le_bytes(0x1234_5678))(input)?;
-    let (input, _cd1) = le_u32(input)?;
-    let (input, _cd2) = le_u32(input)?;
-    let (input, _cd3) = le_u32(input)?;
-    let (input, _cd4) = le_u32(input)?;
+    let (input, data_source) = parse_data_source(input)?;
 
-    let (input, d14_len) = map_res(le_u32, usize::try_from)(input)?;
-    let (input, d14) = count(le_u32, d14_len)(input)?;
-    let (input, schema) = parse_u32_wstring_nt(input)?;
-    let (input, table) = parse_u32_wstring_nt(input)?;
     Ok((
         input,
         SchGrid {
             extent,
-            b: GridFrameWnd {
+            frame: GridFrameWnd {
                 _d4: d4,
                 name,
                 _d5_1: d5_1,
@@ -156,22 +162,14 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
                 _d5_3: d5_3,
                 _d6: d6,
                 _d7,
-                _size2: size2,
+                size: size2,
                 _d8_0: d8_0,
                 col_count,
                 cols_shown,
                 _x1: x1,
                 _x2: x2,
             },
-            c: DataSource {
-                _cd1,
-                _cd2,
-                _cd3,
-                _cd4,
-                _d14: d14,
-                schema,
-                table,
-            },
+            data_source,
         },
     ))
 }
