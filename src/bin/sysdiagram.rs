@@ -169,11 +169,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
             Control::SchGrid(sch_grid) => {
                 println!("{:?}", sch_grid.extent);
                 println!("caption: {:?}", sch_grid.frame.caption);
-                println!("- {:?}", sch_grid.frame.x1);
-                println!("- {:?}", sch_grid.frame.cols);
-                println!("- {:?}", sch_grid.frame.keys);
-                println!("- {:?}", sch_grid.frame.x2);
-                println!("- {:?}", sch_grid.frame.x3);
+                for layout in &sch_grid.frame.layouts[..] {
+                    println!("- {:?}", layout);
+                }
                 println!("{:?}", sch_grid.data_source);
             }
             Control::Label(label) => {
@@ -235,9 +233,11 @@ fn generate_svg(
                     r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="1" fill="none" />"#,
                     x, y, w, h, "red"
                 );
+                let cols_layout = &sch_grid.frame.layouts[1];
+                let keys_layout = &sch_grid.frame.layouts[2];
                 if debug {
-                    let w2 = u_himetric_to_mm(sch_grid.frame.cols.v6[0]);
-                    let w3 = u_himetric_to_mm(sch_grid.frame.cols.v6[1]);
+                    let w2 = u_himetric_to_mm(cols_layout.widths[0]);
+                    let w3 = u_himetric_to_mm(cols_layout.widths[1]);
 
                     let y2 = y + h;
                     let x2 = x + w2 * 2.0;
@@ -257,10 +257,10 @@ fn generate_svg(
                     x + 2.0,
                     y + 6.0,
                     sch_grid.frame.caption,
-                    sch_grid.frame.cols.count,
-                    sch_grid.frame.cols.shown,
-                    sch_grid.frame.keys.count,
-                    sch_grid.frame.keys.shown,
+                    cols_layout.row_max,
+                    cols_layout.row_min,
+                    keys_layout.row_max,
+                    keys_layout.row_min,
                 );
             }
             Control::Label(label) => {

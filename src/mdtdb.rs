@@ -13,7 +13,6 @@
 use crate::{le_u32_2, parse_u32_wstring_nt, parse_wstring_nt};
 use ms_oforms::properties::Size;
 use nom::bytes::complete::tag;
-use nom::combinator::map;
 use nom::multi::{count, length_count, length_value};
 use nom::number::complete::{le_u16, le_u32};
 use nom::sequence::pair;
@@ -51,22 +50,14 @@ pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("847f3bf4-617f-43c7-8535-2986e1d55
 #[allow(dead_code)]
 pub struct SchGrid {
     pub extent: Size,
-    pub frame: Box<GridFrameWnd>,
+    pub frame: GridFrameWnd,
     pub data_source: DataSource,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GridFrameWnd {
     pub caption: String,
-    pub x1: GridSpec,
-    /// - .count Probably the number of columns on this table
-    /// - .shown is min(.count, 12)
-    /// - .size is identical to the main view extent
-    pub cols: GridSpec,
-    pub keys: GridSpec,
-    /// - .count/.shown is possibly the number of key constraints on this table (primary + foreign)
-    pub x2: GridSpec,
-    pub x3: GridSpec,
+    pub layouts: Box<[GridSpec; 5]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,36 +69,62 @@ pub struct DataSource {
     pub schema: String,
 }
 
+/// See:
+/// - <https://nakulvachhrajani.com/2021/03/15/0423-sql-server-exporting-database-diagrams-for-offline-viewing/>
+/// - <https://learn.microsoft.com/en-us/sql/ssms/visual-db-tools/column-selection-dialog-box-visual-database-tools>
+/// - <https://learn.microsoft.com/en-us/sql/ssms/visual-db-tools/customize-the-amount-of-information-displayed-in-diagrams-visual-database-tools>
+///
+pub enum TableView {
+    Custom = 0,
+    ColumnNames = 1,
+    Keys = 2,
+    NameOnly = 3,
+    Standard = 4,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub struct GridSpec {
-    pub v0: (u32, u32),
-    pub v1: Size,
-    pub v2: u32,
-    pub count: u32,
-    pub shown: u32,
-    pub v5: u32,
-    pub v6: Vec<u32>,
+    /// Unknown
+    pub(crate) v0: (u32, u32),
+    /// The physical size of the grid frame
+    pub size: Size,
+    /// Unknown
+    pub(crate) v2: u32,
+    /// Total number of rows in the grid layout
+    ///
+    /// Note: One grid row corresponds to one column definition on the table
+    pub row_max: u32,
+    /// Minimal number of rows that the box can be resized to
+    pub row_min: u32,
+    /// Total number of columns in the grid layout
+    pub col_max: u32,
+    /// Minimal number of columns that the box can be resized to
+    pub col_min: u32,
+    /// Widths (Unit unknown)
+    ///
+    /// The first is generally 284 (which seems related to 284pt ~= 100mm)
+    pub widths: Vec<u32>,
 }
 
 fn parse_grid_spec(input: &[u8]) -> IResult<&[u8], GridSpec> {
     let (input, v0) = le_u32_2(input)?;
-    let (input, v1) = Size::parse(input)?;
+    let (input, size) = Size::parse(input)?;
     let (input, v2) = le_u32(input)?;
-    let (input, _count) = le_u32(input)?;
-    let (input, shown) = le_u32(input)?;
-    let (input, (v6_count, v5)) = pair(le_u32, le_u32)(input)?;
-    let (input, v6) = count(le_u32, v6_count as usize)(input)?;
+    let (input, row_max) = le_u32(input)?;
+    let (input, row_min) = le_u32(input)?;
+    let (input, (col_max, col_min)) = pair(le_u32, le_u32)(input)?;
+    let (input, widths) = count(le_u32, col_max as usize)(input)?;
     Ok((
         input,
         GridSpec {
             v0,
-            v1,
+            size,
             v2,
-            count: _count,
-            shown,
-            v5,
-            v6,
+            row_max,
+            row_min,
+            col_max,
+            col_min,
+            widths,
         },
     ))
 }
@@ -155,7 +172,8 @@ fn parse_grid_frame_wnd(input: &[u8]) -> IResult<&[u8], GridFrameWnd> {
     let (input, _) = tag(u32::to_le_bytes(0x1234_5678))(input)?;
     let (input, (v_minor, v_major)) = pair(le_u16, le_u16)(input)?;
     assert_eq!((v_minor, v_major), (7, 0));
-    let (input, name) = length_value(le_u32, parse_wstring_nt)(input)?;
+    let (input, caption) = length_value(le_u32, parse_wstring_nt)(input)?;
+
     let (input, x1) = parse_grid_spec(input)?;
     let (input, cols) = parse_grid_spec(input)?;
     let (input, keys) = parse_grid_spec(input)?;
@@ -164,19 +182,15 @@ fn parse_grid_frame_wnd(input: &[u8]) -> IResult<&[u8], GridFrameWnd> {
     Ok((
         input,
         GridFrameWnd {
-            caption: name,
-            x1,
-            cols,
-            keys,
-            x2,
-            x3,
+            caption,
+            layouts: Box::new([x1, cols, keys, x2, x3]),
         },
     ))
 }
 
 pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
     let (input, extent) = parse_ole_control_extent(input)?;
-    let (input, frame) = map(parse_grid_frame_wnd, Box::new)(input)?;
+    let (input, frame) = parse_grid_frame_wnd(input)?;
     let (input, data_source) = parse_data_source(input)?;
 
     Ok((
