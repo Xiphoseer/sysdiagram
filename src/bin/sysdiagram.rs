@@ -239,16 +239,25 @@ fn generate_svg(
                     let w2 = u_himetric_to_mm(cols_layout.widths[0]);
                     let w3 = u_himetric_to_mm(cols_layout.widths[1]);
 
-                    let y2 = y + h;
-                    let x2 = x + w2 * 2.0;
-                    let x3 = x2 + w3 * 2.0;
+                    let scale = 1.95;
+                    let y2 = y + (3.0 * scale);
+                    let x2 = x + w2 * scale;
+                    let x3 = x2 + w3 * scale;
+                    let h2 = 2.84 * scale * cols_layout.row_max as f32;
                     println!(
-                        r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
-                        x2, y, x2, y2, "purple"
+                        r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
+                        x2,
+                        y2,
+                        w3 * scale,
+                        h2,
+                        "purple"
                     );
+
+                    let h3 = 2.84 * scale * cols_layout.row_min as f32;
+                    let y3 = y2 + h3;
                     println!(
                         r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
-                        x3, y, x3, y2, "purple"
+                        x2, y3, x3, y3, "pink"
                     );
                 }
 
