@@ -235,19 +235,32 @@ fn generate_svg(
                     r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="1" fill="none" />"#,
                     x, y, w, h, "red"
                 );
-                /*if debug {
-                    let (w2, h2) = size_himetric_to_mm(sch_grid.frame._d5_2);
+                if debug {
+                    let w2 = u_himetric_to_mm(sch_grid.frame.cols.v6[0]);
+                    let w3 = u_himetric_to_mm(sch_grid.frame.cols.v6[1]);
+
+                    let y2 = y + h;
+                    let x2 = x + w2 * 2.0;
+                    let x3 = x2 + w3 * 2.0;
                     println!(
-                        r#"<rect x="{}" y="{}" width="{}" height="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
-                        x, y, w2, h2, "purple"
+                        r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
+                        x2, y, x2, y2, "purple"
                     );
-                }*/
+                    println!(
+                        r#"<line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="0.5" fill="none" />"#,
+                        x3, y, x3, y2, "purple"
+                    );
+                }
 
                 println!(
-                    r#"<text x="{}" y="{}" font-size="4" font-family="Tahoma">{}</text>"#,
+                    r#"<text x="{}" y="{}" font-size="4" font-family="Tahoma">{} ({}/{}; {}/{})</text>"#,
                     x + 2.0,
                     y + 6.0,
-                    sch_grid.frame.caption
+                    sch_grid.frame.caption,
+                    sch_grid.frame.cols.count,
+                    sch_grid.frame.cols.shown,
+                    sch_grid.frame.keys.count,
+                    sch_grid.frame.keys.shown,
                 );
             }
             Control::Label(label) => {
@@ -315,12 +328,20 @@ fn generate_svg(
     println!("</svg>");
 }
 
+fn himetric_to_mm(len: i32) -> f32 {
+    len as f32 / 100.0
+}
+
+fn u_himetric_to_mm(len: u32) -> f32 {
+    len as f32 / 100.0
+}
+
 fn pos_himetric_to_mm(p: &Position) -> (f32, f32) {
-    (p.left as f32 / 100.0, p.top as f32 / 100.0)
+    (himetric_to_mm(p.left), himetric_to_mm(p.top))
 }
 
 fn size_himetric_to_mm(size: Size) -> (f32, f32) {
-    (size.width as f32 / 100.0, size.height as f32 / 100.0)
+    (u_himetric_to_mm(size.width), u_himetric_to_mm(size.height))
 }
 
 pub fn main() -> Result<(), anyhow::Error> {
