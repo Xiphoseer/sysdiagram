@@ -8,6 +8,11 @@
 //! built with Microsoft Foundation Classes (MFC), with some the embedded window frame
 //! inheriting from `CFrameWnd`.
 //!
+//! For an impression of what the control looked like and what it could do in 2008, see
+//! <https://weblog.west-wind.com/posts/2008/jan/25/an-easier-table-design-view-in-sql-server-management-studio>,
+//! specifically this image:
+//! <https://weblog.west-wind.com/images/200701/WindowsLiveWriter/AneasierViewforRecordDesigninSqlServerSt_103BE/SqlTableViewDesigner_2.png>
+//!
 //! See also: <http://www.dejadejadeja.com/detech/ocxdb/mdt2db.dll.txt.lisp>
 
 use crate::{le_u32_2, parse_u32_wstring_nt, parse_wstring_nt};
@@ -93,7 +98,10 @@ pub enum TableView {
 
 /// Columns that can be shown for a table
 ///
-/// See: <https://dataedo.com/kb/tools/ssms/how-to-view-and-edit-table-and-column-comments>
+/// See:
+/// - <https://stackoverflow.com/a/10538313>
+/// - <https://dataedo.com/kb/tools/ssms/how-to-view-and-edit-table-and-column-comments>
+/// - <https://www.west-wind.com/WebLog/images/200701/WindowsLiveWriter/AneasierViewforRecordDesigninSqlServerSt_103BE/ColumnSelection_2.png>
 pub enum PropViewColumn {
     ColumnName,
     DataType,
