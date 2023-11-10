@@ -69,6 +69,8 @@ pub struct DataSource {
     pub schema: String,
 }
 
+/// "Table View" selection for a table
+///
 /// See:
 /// - <https://nakulvachhrajani.com/2021/03/15/0423-sql-server-exporting-database-diagrams-for-offline-viewing/>
 /// - <https://learn.microsoft.com/en-us/sql/ssms/visual-db-tools/column-selection-dialog-box-visual-database-tools>
@@ -82,10 +84,35 @@ pub enum TableView {
     Standard = 4,
 }
 
+/// Columns that can be shown for a table
+///
+/// See: <https://dataedo.com/kb/tools/ssms/how-to-view-and-edit-table-and-column-comments>
+pub enum PropViewColumn {
+    ColumnName,
+    DataType,
+    Length,
+    Precision,
+    Scale,
+    AllowNulls,
+    DefaultValue,
+    Identity,
+    IdentitySeed,
+    IdentityIncrement,
+    RowGUID,
+    Nullable,
+    CondensedType,
+    NotForReplication,
+    Formula,
+    Collation,
+    Description,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GridSpec {
+    /// 1 for [`TableView::NameOnly`], 0 otherwise
+    pub hidden: u32,
     /// Unknown
-    pub(crate) v0: (u32, u32),
+    pub(crate) v1: u32,
     /// The physical size of the grid frame
     pub size: Size,
     /// Unknown
@@ -107,7 +134,7 @@ pub struct GridSpec {
 }
 
 fn parse_grid_spec(input: &[u8]) -> IResult<&[u8], GridSpec> {
-    let (input, v0) = le_u32_2(input)?;
+    let (input, (hidden, v1)) = le_u32_2(input)?;
     let (input, size) = Size::parse(input)?;
     let (input, v2) = le_u32(input)?;
     let (input, row_max) = le_u32(input)?;
@@ -117,7 +144,8 @@ fn parse_grid_spec(input: &[u8]) -> IResult<&[u8], GridSpec> {
     Ok((
         input,
         GridSpec {
-            v0,
+            hidden,
+            v1,
             size,
             v2,
             row_max,
