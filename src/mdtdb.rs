@@ -54,8 +54,11 @@ pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("847f3bf4-617f-43c7-8535-2986e1d55
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub struct SchGrid {
+    /// Actual size of the control on the diagram surface
     pub extent: Size,
+    /// Configuration of the column grid frame (layout)
     pub frame: GridFrameWnd,
+    /// Configuration of the associated data source
     pub data_source: DataSource,
 }
 
