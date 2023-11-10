@@ -17,7 +17,7 @@
 //!
 //! The "Microsoft Data Tools Database Designer" alongside its siblings, the "Microsoft Data Tools Query Designer"
 //! and "Microsoft Data Tools Table Designer" were implemented using the "Microsoft DT DDS Form 2.0"
-//! technology. *DDS* in this case stands for [*DaVinci Diagram Surface*][`dds`], which is a set of OLE
+//! technology. *DDS* in this case stands for [*DaVinci Design Surface*][`dds`], which is a set of OLE
 //! Controls originating in Visual Studio.
 //!
 //! ## Preview
