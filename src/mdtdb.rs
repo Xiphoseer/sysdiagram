@@ -56,15 +56,22 @@ pub struct SchGrid {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GridFrameWnd {
+    /// The title of the frame window
     pub caption: String,
+    /// A set of grid layout structs, one for each [`TableView`].
     pub layouts: Box<[GridSpec; 5]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataSource {
-    pub(crate) _cd3: u32,
-    pub(crate) _cd4: u32,
-    pub(crate) _d14: Vec<u32>, // 0 - 10, selected columns?
+    // one of these is the [`TableView`]
+    pub(crate) _cd3: u32, // 1
+    pub(crate) _cd4: u32, // 1
+    /// Probably the settings in the [Column Selection Dialog Box], that is the selected column IDs, in the selected order.
+    /// See [`PropViewColumn`].
+    ///
+    /// [Column Selection Dialog Box]: https://learn.microsoft.com/en-us/sql/ssms/visual-db-tools/column-selection-dialog-box-visual-database-tools?view=sql-server-ver16>
+    pub column_selection: Vec<u32>,
     pub table: String,
     pub schema: String,
 }
@@ -130,6 +137,7 @@ pub struct GridSpec {
     /// Widths (Unit unknown)
     ///
     /// The first is generally 284 (which seems related to 284pt ~= 100mm)
+    /// which is probably the icon column.
     pub widths: Vec<u32>,
 }
 
@@ -182,7 +190,7 @@ fn _parse_data_source(input: &[u8]) -> IResult<&[u8], DataSource> {
         DataSource {
             _cd3,
             _cd4,
-            _d14,
+            column_selection: _d14,
             schema,
             table,
         },
