@@ -297,8 +297,10 @@ fn generate_svg(
             Control::Polyline(line) => {
                 if debug {
                     println!(r#"<circle cx="{}" cy="{}" r="2" fill="green" />"#, x, y);
-                    let (lx, ly) = pos_himetric_to_mm(&line.label_pos);
-                    println!(r#"<circle cx="{}" cy="{}" r="4" fill="cyan" />"#, lx, ly);
+                    for label in &line.labels {
+                        let (lx, ly) = pos_himetric_to_mm(&label.pos);
+                        println!(r#"<circle cx="{}" cy="{}" r="4" fill="cyan" />"#, lx, ly);
+                    }
                 }
                 print!(
                     r#"<polyline stroke-width="1" id="c{}" fill="none" stroke="{}" points=""#,

@@ -21,7 +21,7 @@ use nom::{
     bytes::complete::take,
     combinator::{map, map_opt, rest},
     error::{FromExternalError, ParseError},
-    multi::count,
+    multi::{count, length_count},
     number::complete::{le_u16, le_u32, le_u8},
     IResult,
 };
@@ -76,6 +76,14 @@ pub enum DdsPolylineEndType {
     Custom = 99,
 }
 
+#[derive(Debug)]
+pub struct LabelRef {
+    pub id: u32,
+    pub(crate) _x2: u32, // 0
+    pub pos: Position,
+    pub size: Size,
+}
+
 /// ## Polyline
 ///
 /// See also: <https://wutils.com/com-dll/constants/constants-MSDDS.htm>
@@ -87,11 +95,7 @@ pub struct Polyline {
     pub end_type_dest: DdsPolylineEndType, // 2 (dlotConnector ?, dbvUIActiveVisible ? dpcetsRect ? dpcetcsLineColor ? dpetKey ?)
     pub color: OleColor,
     pub(crate) _x1: BString, // (16) GUID NIL?, Color Black?
-    pub(crate) _d4: u32,     // 1
-    pub label_id: u32,
-    pub(crate) _x2: BString, // 0
-    pub label_pos: Position,
-    pub label_size: Size,
+    pub labels: Vec<LabelRef>,
     pub(crate) _d7: u8,        // 0b0011_1111 flags ??
     pub(crate) _rest: BString, // "\0\0\0\x01\0"
 }
@@ -177,6 +181,14 @@ where
     ))
 }
 
+fn parse_label_ref(input: &[u8]) -> IResult<&[u8], LabelRef> {
+    let (input, id) = le_u32(input)?;
+    let (input, _x2) = le_u32(input)?;
+    let (input, pos) = Position::parse(input)?;
+    let (input, size) = Size::parse(input)?;
+    Ok((input, LabelRef { id, _x2, pos, size }))
+}
+
 // See:
 // - <https://wutils.com/com-dll/constants/constants-MSDDS.htm>
 // - <https://wutils.com/com-dll/constants/constants-MSDDSForm.htm>
@@ -194,11 +206,7 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     let (input, end_type_dest) = map_opt(le_u32, DdsPolylineEndType::from_u32)(input)?;
     let (input, color) = parse_ole_color(input)?;
     let (input, _x1) = map(take(16usize), BString::from)(input)?;
-    let (input, _d4) = le_u32(input)?;
-    let (input, label_id) = le_u32(input)?;
-    let (input, _x2) = map(take(4usize), BString::from)(input)?;
-    let (input, _pos) = Position::parse(input)?;
-    let (input, label_size) = Size::parse(input)?;
+    let (input, labels) = length_count(le_u32, parse_label_ref)(input)?;
     let (input, _d7) = le_u8(input)?;
     /*let (input, _d8) = take(6usize)(input)?;
     let (input, d9) = le_u32(input)?;*/
@@ -212,11 +220,7 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
             end_type_dest,
             color,
             _x1,
-            _d4,
-            label_id,
-            _x2,
-            label_pos: _pos,
-            label_size,
+            labels,
             _d7,
             /*d8, d9,*/
             _rest,
