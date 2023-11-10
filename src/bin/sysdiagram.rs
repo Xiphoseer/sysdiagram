@@ -163,11 +163,17 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         Control::SchGrid(_) => opts.tables,
         _ => false,
     }) {
+        println!();
         println!("==> {:?}", site);
         match control {
             Control::SchGrid(sch_grid) => {
                 println!("{:?}", sch_grid.extent);
-                println!("{:?}", sch_grid.frame);
+                println!("caption: {:?}", sch_grid.frame.caption);
+                println!("- {:?}", sch_grid.frame.x1);
+                println!("- {:?}", sch_grid.frame.cols);
+                println!("- {:?}", sch_grid.frame.keys);
+                println!("- {:?}", sch_grid.frame.x2);
+                println!("- {:?}", sch_grid.frame.x3);
                 println!("{:?}", sch_grid.data_source);
             }
             Control::Label(label) => {
@@ -241,7 +247,7 @@ fn generate_svg(
                     r#"<text x="{}" y="{}" font-size="4" font-family="Tahoma">{}</text>"#,
                     x + 2.0,
                     y + 6.0,
-                    sch_grid.frame.name
+                    sch_grid.frame.caption
                 );
             }
             Control::Label(label) => {

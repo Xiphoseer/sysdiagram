@@ -13,6 +13,7 @@
 use crate::{le_u32_2, parse_u32_wstring_nt, parse_wstring_nt};
 use ms_oforms::properties::Size;
 use nom::bytes::complete::tag;
+use nom::combinator::map;
 use nom::multi::{count, length_count, length_value};
 use nom::number::complete::{le_u16, le_u32};
 use nom::sequence::pair;
@@ -56,42 +57,16 @@ pub struct SchGrid {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GridFrameWnd {
-    pub name: String,
-    pub(crate) _d5: SG4,
-    //pub(crate) _d5_1: (u32, u32),
-    //pub _d5_2: Size, // scroll container size? width bigger, height smaller (or exact, or both bigger)
-    //pub(crate) _d5_3: (u32, u32),
-    //pub(crate) _d6: u32,
-    //pub(crate) _d7_1: SG3,
-    pub(crate) cols: SG4,
-    //pub(crate) _d7_2: (u32, u32),
-    //pub size: Size,
-    //pub(crate) _d8_0: u32,
-    ///// Probably the number of columns on this table
-    //pub col_count: u32,
-    ///// Mostly min(col_count, 12)
-    //pub cols_shown: u32,
-    ////pub(crate) _x0: SG2,
-    //pub(crate) _x0_1: SG3,
-    pub(crate) keys: SG4,
-    //pub(crate) _x0_2: (u32, u32),
-    //pub(crate) _x0_3: Size,
-    //pub(crate) _e0: u32,
-    ///// Possibly the number of key constraints on this table (primary + foreign)
-    //pub keys: (u32, u32),
-    ////pub(crate) _x1: SG1,
-    //pub(crate) _x1_1: SG3,
-    pub(crate) x2: SG4,
-    //pub(crate) _x1_2: (u32, u32),
-    //pub(crate) _x1_3: Size,
-    //pub(crate) _x1_4: (u32, u32, u32),
-    //pub(crate) _x2: SG1,
-    //pub(crate) _x2_1: SG3,
-    pub(crate) x3: SG4,
-    //pub(crate) _x2_2: (u32, u32),
-    //pub(crate) _x2_3: Size,
-    //pub(crate) _x2_4: (u32, u32, u32),
-    //pub(crate) _x3: SG3,
+    pub caption: String,
+    pub x1: GridSpec,
+    /// - .count Probably the number of columns on this table
+    /// - .shown is min(.count, 12)
+    /// - .size is identical to the main view extent
+    pub cols: GridSpec,
+    pub keys: GridSpec,
+    /// - .count/.shown is possibly the number of key constraints on this table (primary + foreign)
+    pub x2: GridSpec,
+    pub x3: GridSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -105,65 +80,36 @@ pub struct DataSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
-pub(crate) struct SG1(pub(crate) Vec<u32>);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
-pub(crate) struct SG2(pub(crate) Vec<u32>, pub(crate) Size);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
-pub(crate) struct SG3 {
-    pub(crate) v1: u32,
-    pub(crate) v2: Vec<u32>,
+pub struct GridSpec {
+    pub v0: (u32, u32),
+    pub v1: Size,
+    pub v2: u32,
+    pub count: u32,
+    pub shown: u32,
+    pub v5: u32,
+    pub v6: Vec<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
-pub(crate) struct SG4 {
-    v0: (u32, u32),
-    v1: Size,
-    v2: u32,
-    count: u32,
-    shown: u32,
-    v5: SG3,
-}
-
-fn parse_sch_grid_inner4(input: &[u8]) -> IResult<&[u8], SG4> {
+fn parse_grid_spec(input: &[u8]) -> IResult<&[u8], GridSpec> {
     let (input, v0) = le_u32_2(input)?;
     let (input, v1) = Size::parse(input)?;
     let (input, v2) = le_u32(input)?;
-    let (input, count) = le_u32(input)?;
+    let (input, _count) = le_u32(input)?;
     let (input, shown) = le_u32(input)?;
-    let (input, v5) = parse_sch_grid_inner3(input)?;
+    let (input, (v6_count, v5)) = pair(le_u32, le_u32)(input)?;
+    let (input, v6) = count(le_u32, v6_count as usize)(input)?;
     Ok((
         input,
-        SG4 {
+        GridSpec {
             v0,
             v1,
             v2,
-            count,
+            count: _count,
             shown,
             v5,
+            v6,
         },
     ))
-}
-
-fn _parse_sch_grid_inner(input: &[u8]) -> IResult<&[u8], SG1> {
-    let (input, v1) = count(le_u32, 6)(input)?;
-    Ok((input, SG1(v1)))
-}
-
-fn _parse_sch_grid_inner2(input: &[u8]) -> IResult<&[u8], SG2> {
-    let (input, v1) = count(le_u32, 6)(input)?;
-    let (input, size) = Size::parse(input)?;
-    Ok((input, SG2(v1, size)))
-}
-
-fn parse_sch_grid_inner3(input: &[u8]) -> IResult<&[u8], SG3> {
-    let (input, (v2_count, v1)) = pair(le_u32, le_u32)(input)?;
-    let (input, v2) = count(le_u32, v2_count as usize)(input)?;
-    Ok((input, SG3 { v1, v2 }))
 }
 
 // See:
@@ -205,79 +151,39 @@ fn parse_data_source(input: &[u8]) -> IResult<&[u8], DataSource> {
     length_value(le_u32, _parse_data_source)(input)
 }
 
-pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
-    let (input, extent) = parse_ole_control_extent(input)?;
+fn parse_grid_frame_wnd(input: &[u8]) -> IResult<&[u8], GridFrameWnd> {
     let (input, _) = tag(u32::to_le_bytes(0x1234_5678))(input)?;
     let (input, (v_minor, v_major)) = pair(le_u16, le_u16)(input)?;
     assert_eq!((v_minor, v_major), (7, 0));
     let (input, name) = length_value(le_u32, parse_wstring_nt)(input)?;
-    let (input, _d5) = parse_sch_grid_inner4(input)?;
-    //let (input, _d7_2) = le_u32_2(input)?;
-    //let (input, size) = Size::parse(input)?;
-    //let (input, _d8_0) = le_u32(input)?;
-    //let (input, col_count) = le_u32(input)?;
-    //let (input, cols_shown) = le_u32(input)?;
-    //let (input, _x0_1) = parse_sch_grid_inner3(input)?;
-    let (input, cols) = parse_sch_grid_inner4(input)?;
+    let (input, x1) = parse_grid_spec(input)?;
+    let (input, cols) = parse_grid_spec(input)?;
+    let (input, keys) = parse_grid_spec(input)?;
+    let (input, x2) = parse_grid_spec(input)?;
+    let (input, x3) = parse_grid_spec(input)?;
+    Ok((
+        input,
+        GridFrameWnd {
+            caption: name,
+            x1,
+            cols,
+            keys,
+            x2,
+            x3,
+        },
+    ))
+}
 
-    //let (input, _x0_2) = le_u32_2(input)?;
-    //let (input, _x0_3) = Size::parse(input)?;
-    //let (input, _e0) = le_u32(input)?;
-    //let (input, keys) = le_u32_2(input)?;
-    //let (input, _x1_1) = parse_sch_grid_inner3(input)?;
-    let (input, keys) = parse_sch_grid_inner4(input)?;
-
-    //let (input, _x1_2) = le_u32_2(input)?;
-    //let (input, _x1_3) = Size::parse(input)?;
-    //let (input, _x1_4) = le_u32_3(input)?;
-    //let (input, _x2_1) = parse_sch_grid_inner3(input)?;
-    let (input, x2) = parse_sch_grid_inner4(input)?;
-
-    //let (input, _x2_2) = le_u32_2(input)?;
-    //let (input, _x2_3) = Size::parse(input)?;
-    //let (input, _x2_4) = le_u32_3(input)?;
-    //let (input, _x3) = parse_sch_grid_inner3(input)?;
-    let (input, x3) = parse_sch_grid_inner4(input)?;
-
+pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
+    let (input, extent) = parse_ole_control_extent(input)?;
+    let (input, frame) = map(parse_grid_frame_wnd, Box::new)(input)?;
     let (input, data_source) = parse_data_source(input)?;
 
     Ok((
         input,
         SchGrid {
             extent,
-            frame: Box::new(GridFrameWnd {
-                name,
-                _d5,
-                //_d5_1,
-                //_d5_2,
-                //_d5_3,
-                //_d6,
-                //_d7_1,
-                cols,
-                //_d7_2,
-                //size,
-                //_d8_0,
-                //col_count,
-                //cols_shown,
-                ////_x0,
-                //_x0_1,
-                keys,
-                //_x0_2,
-                //_x0_3,
-                //_e0,
-                //keys,
-                //_x1_1,
-                x2,
-                //_x1_2,
-                //_x1_3,
-                //_x1_4,
-                //_x2_1,
-                x3,
-                //_x2_2,
-                //_x2_3,
-                //_x2_4,
-                //_x3,
-            }),
+            frame,
             data_source,
         },
     ))
