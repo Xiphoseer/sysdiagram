@@ -50,31 +50,48 @@ pub const CLSID_DSCHGRID_EVENTS: Uuid = uuid!("847f3bf4-617f-43c7-8535-2986e1d55
 #[allow(dead_code)]
 pub struct SchGrid {
     pub extent: Size,
-    pub frame: GridFrameWnd,
+    pub frame: Box<GridFrameWnd>,
     pub data_source: DataSource,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GridFrameWnd {
     pub name: String,
-    pub(crate) _d5_1: (u32, u32),
-    pub _d5_2: Size, // scroll container size? width bigger, height smaller (or exact, or both bigger)
-    pub(crate) _d5_3: (u32, u32),
-    pub(crate) _d6: u32,
-    pub(crate) _d7_1: SG3,
-    pub(crate) _d7_2: (u32, u32),
-    pub size: Size,
-    pub(crate) _d8_0: u32,
-    pub col_count: u32,
-    pub cols_shown: u32, // mostly min(col_count, 12)
-    //pub(crate) _x0: SG2,
-    pub(crate) _x0_1: SG3,
-    pub(crate) _x0_2: (u32, u32),
-    pub(crate) _x0_3: Size,
-    pub(crate) _e0: u32,
-    pub(crate) keys: (u32, u32),
-    pub(crate) _x1: Vec<SG1>,
-    pub(crate) _x2: SG3,
+    pub(crate) _d5: SG4,
+    //pub(crate) _d5_1: (u32, u32),
+    //pub _d5_2: Size, // scroll container size? width bigger, height smaller (or exact, or both bigger)
+    //pub(crate) _d5_3: (u32, u32),
+    //pub(crate) _d6: u32,
+    //pub(crate) _d7_1: SG3,
+    pub(crate) cols: SG4,
+    //pub(crate) _d7_2: (u32, u32),
+    //pub size: Size,
+    //pub(crate) _d8_0: u32,
+    ///// Probably the number of columns on this table
+    //pub col_count: u32,
+    ///// Mostly min(col_count, 12)
+    //pub cols_shown: u32,
+    ////pub(crate) _x0: SG2,
+    //pub(crate) _x0_1: SG3,
+    pub(crate) keys: SG4,
+    //pub(crate) _x0_2: (u32, u32),
+    //pub(crate) _x0_3: Size,
+    //pub(crate) _e0: u32,
+    ///// Possibly the number of key constraints on this table (primary + foreign)
+    //pub keys: (u32, u32),
+    ////pub(crate) _x1: SG1,
+    //pub(crate) _x1_1: SG3,
+    pub(crate) x2: SG4,
+    //pub(crate) _x1_2: (u32, u32),
+    //pub(crate) _x1_3: Size,
+    //pub(crate) _x1_4: (u32, u32, u32),
+    //pub(crate) _x2: SG1,
+    //pub(crate) _x2_1: SG3,
+    pub(crate) x3: SG4,
+    //pub(crate) _x2_2: (u32, u32),
+    //pub(crate) _x2_3: Size,
+    //pub(crate) _x2_4: (u32, u32, u32),
+    //pub(crate) _x3: SG3,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,7 +105,7 @@ pub struct DataSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
-pub(crate) struct SG1(pub(crate) Vec<u32>, pub(crate) Size, pub(crate) Vec<u32>);
+pub(crate) struct SG1(pub(crate) Vec<u32>);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
@@ -101,11 +118,40 @@ pub(crate) struct SG3 {
     pub(crate) v2: Vec<u32>,
 }
 
-fn parse_sch_grid_inner(input: &[u8]) -> IResult<&[u8], SG1> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
+pub(crate) struct SG4 {
+    v0: (u32, u32),
+    v1: Size,
+    v2: u32,
+    count: u32,
+    shown: u32,
+    v5: SG3,
+}
+
+fn parse_sch_grid_inner4(input: &[u8]) -> IResult<&[u8], SG4> {
+    let (input, v0) = le_u32_2(input)?;
+    let (input, v1) = Size::parse(input)?;
+    let (input, v2) = le_u32(input)?;
+    let (input, count) = le_u32(input)?;
+    let (input, shown) = le_u32(input)?;
+    let (input, v5) = parse_sch_grid_inner3(input)?;
+    Ok((
+        input,
+        SG4 {
+            v0,
+            v1,
+            v2,
+            count,
+            shown,
+            v5,
+        },
+    ))
+}
+
+fn _parse_sch_grid_inner(input: &[u8]) -> IResult<&[u8], SG1> {
     let (input, v1) = count(le_u32, 6)(input)?;
-    let (input, size) = Size::parse(input)?;
-    let (input, v2) = count(le_u32, 3)(input)?;
-    Ok((input, SG1(v1, size, v2)))
+    Ok((input, SG1(v1)))
 }
 
 fn _parse_sch_grid_inner2(input: &[u8]) -> IResult<&[u8], SG2> {
@@ -165,51 +211,73 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
     let (input, (v_minor, v_major)) = pair(le_u16, le_u16)(input)?;
     assert_eq!((v_minor, v_major), (7, 0));
     let (input, name) = length_value(le_u32, parse_wstring_nt)(input)?;
-    let (input, d5_1) = le_u32_2(input)?;
-    let (input, _d5_2) = Size::parse(input)?;
-    let (input, d5_3) = le_u32_2(input)?;
-    let (input, d6) = le_u32(input)?;
-    let (input, _d7_1) = parse_sch_grid_inner3(input)?;
-    let (input, _d7_2) = le_u32_2(input)?;
-    let (input, size) = Size::parse(input)?;
-    let (input, _d8_0) = le_u32(input)?;
-    let (input, col_count) = le_u32(input)?;
-    let (input, cols_shown) = le_u32(input)?;
-    let (input, _x0_1) = parse_sch_grid_inner3(input)?;
-    let (input, _x0_2) = le_u32_2(input)?;
-    let (input, _x0_3) = Size::parse(input)?;
+    let (input, _d5) = parse_sch_grid_inner4(input)?;
+    //let (input, _d7_2) = le_u32_2(input)?;
+    //let (input, size) = Size::parse(input)?;
+    //let (input, _d8_0) = le_u32(input)?;
+    //let (input, col_count) = le_u32(input)?;
+    //let (input, cols_shown) = le_u32(input)?;
+    //let (input, _x0_1) = parse_sch_grid_inner3(input)?;
+    let (input, cols) = parse_sch_grid_inner4(input)?;
 
-    let (input, _e0) = le_u32(input)?;
-    let (input, keys) = le_u32_2(input)?;
-    let (input, _x1) = count(parse_sch_grid_inner, 2)(input)?;
-    let (input, _x2) = parse_sch_grid_inner3(input)?;
+    //let (input, _x0_2) = le_u32_2(input)?;
+    //let (input, _x0_3) = Size::parse(input)?;
+    //let (input, _e0) = le_u32(input)?;
+    //let (input, keys) = le_u32_2(input)?;
+    //let (input, _x1_1) = parse_sch_grid_inner3(input)?;
+    let (input, keys) = parse_sch_grid_inner4(input)?;
+
+    //let (input, _x1_2) = le_u32_2(input)?;
+    //let (input, _x1_3) = Size::parse(input)?;
+    //let (input, _x1_4) = le_u32_3(input)?;
+    //let (input, _x2_1) = parse_sch_grid_inner3(input)?;
+    let (input, x2) = parse_sch_grid_inner4(input)?;
+
+    //let (input, _x2_2) = le_u32_2(input)?;
+    //let (input, _x2_3) = Size::parse(input)?;
+    //let (input, _x2_4) = le_u32_3(input)?;
+    //let (input, _x3) = parse_sch_grid_inner3(input)?;
+    let (input, x3) = parse_sch_grid_inner4(input)?;
+
     let (input, data_source) = parse_data_source(input)?;
 
     Ok((
         input,
         SchGrid {
             extent,
-            frame: GridFrameWnd {
+            frame: Box::new(GridFrameWnd {
                 name,
-                _d5_1: d5_1,
-                _d5_2,
-                _d5_3: d5_3,
-                _d6: d6,
-                _d7_1,
-                _d7_2,
-                size,
-                _d8_0,
-                col_count,
-                cols_shown,
-                //_x0,
-                _x0_1,
-                _x0_2,
-                _x0_3,
-                _e0,
+                _d5,
+                //_d5_1,
+                //_d5_2,
+                //_d5_3,
+                //_d6,
+                //_d7_1,
+                cols,
+                //_d7_2,
+                //size,
+                //_d8_0,
+                //col_count,
+                //cols_shown,
+                ////_x0,
+                //_x0_1,
                 keys,
-                _x1,
-                _x2,
-            },
+                //_x0_2,
+                //_x0_3,
+                //_e0,
+                //keys,
+                //_x1_1,
+                x2,
+                //_x1_2,
+                //_x1_3,
+                //_x1_4,
+                //_x2_1,
+                x3,
+                //_x2_2,
+                //_x2_3,
+                //_x2_4,
+                //_x3,
+            }),
             data_source,
         },
     ))
