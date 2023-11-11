@@ -45,6 +45,8 @@ pub const TYPELIB_MSDT: Uuid = uuid!("a92cc3f0-e7c4-11ce-a47b-00aa005119fb");
 
 /// Microsoft DT DDS Form 2.0 (aka `MDTDF.Form.1`)
 pub const CLSID_MSDT_DDS_FORM_2: Uuid = uuid!("105b80d2-95f1-11d0-b0a0-00aa00bdcb5c");
+/// Microsoft DDS Form 2.0 (aka `MSDDS.Form.080.1`)
+pub const CLSID_DDS_FORM: Uuid = uuid!("77d2c92e-7779-11d8-9070-00065b840d9c");
 
 /// Microsoft DT DDSForm (`mdt2df.dll`)
 pub const TYPELIB_DDS_FORM: Uuid = uuid!("105b80d0-95f1-11d0-b0a0-00aa00bdcb5c");

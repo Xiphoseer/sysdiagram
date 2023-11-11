@@ -8,21 +8,59 @@
 //! or rather its "Visual Database Tools" component. Diagrams from that era encode
 //! a graphical representation of an ER Diagram, that is a set of tables and relations,
 //! but the binary format stores next to no information on the columns themselves.
+//! 
+//! ## File Format
+//! 
+//! On the surface, the binary blob of the sysdiagram is a OLE 2.0 embedded object
+//! as specified by [\[MS-OLEDS\]] and [\[MS-CFB\]]. Specifically it has a `\1CompObj` stream
+//! that specifies a clipboard format, but no `\1Ole` (or `\1Ole10Native`) stream.
+//! 
+//! The clipboard format is `Embedded Object` with a user type of `Microsoft DDS Form 2.0`.
+//! That matches [ProgID] `MSDDS.Form.080.1` ([CLSID `{77D2C92E-7779-11D8-9070-00065B840D9C}`][`dds::CLSID_DDS_FORM`])
+//! from `msddsf.dll`. That refers to the *Microsoft Design Tools - DDS Forms*. *DDS* in this case stands for
+//! [*DaVinci Design Surface*][`dds`], which is a set of OLE Controls originating in Visual Studio
+//! to implement visual designers.
+//! 
+//! Aside from the database designer, it was also used in the "Query Designer", "Table Designer", and a "Site Designer".
+//! A variant still appears in XML in the DTSX [`dts-designer-1.0`] namespaced PackageVariable, which uses `<dds>` elements
+//! in a unspecified `xmlns:dwd="http://schemas.microsoft.com/DataWarehouse/Designer/1.0"` namespace to store layout
+//! information.
 //!
+//! Most importantly though, it was used in the Visual Studio 5.0 and 6.0 for the UserForm
+//! designer, which also found its way into Office via the [VBA UserForm]s
+//! and their [Designer Storages](https://learn.microsoft.com/en-us/openspecs/office_file_formats/ms-ovba/f614ae64-1b3d-47be-a166-0e10b8230026).
+//! 
+//! There, the form part became [\[MS-OFORMS\]], which specifies the binary file format used
+//! in the `f` stream to encode a UserForm control. This control contains a sequence of OLE control
+//! sites and positions as well as a table of CLSIDs of the used controls and lengths within the `o`
+//! stream where the actual controls are persisted.
+//! 
+//! The compound object also has a `DSREF-SCHEMA-CONTENTS` stream, which is a persisted
+//! [Data Source Reference Object (DSRef)][`dsref`] and probably makes it be a `CF_DSREF`
+//! clipboard object as well. A DSRef is a Visual Studio abstraction that makes it possible
+//! to drag & drop "data objects" between tools & hierarchies. The DSRef has in a sysdiagram has:
+//! - a root note of type `DATABASE` (name is a connection string)
+//! - with one child node of type `SCHEMADIAGRAM` (name is the diagram name)
+//! - one child node of type `TABLE` per table in the diagram (name is table name, owner is schema)
+//!
+//! ## The Controls
+//! 
 //! Tables are represented by a [`SchGrid`] OLE Control, which is bound to a table of
-//! the Data Source via the [Data Source Reference Object (DSRef)][`dsref`]. In the designer,
-//! each row of this grid control represents a column of a table.
-//!
-//! ## Technical Underpinnings
-//!
-//! The "Microsoft Data Tools Database Designer" alongside its siblings, the "Microsoft Data Tools Query Designer"
-//! and "Microsoft Data Tools Table Designer" were implemented using the "Microsoft DT DDS Form 2.0"
-//! technology. *DDS* in this case stands for [*DaVinci Design Surface*][`dds`], which is a set of OLE
-//! Controls originating in Visual Studio.
+//! the Data Source via the DSRef. In the designer, each row of this grid control represents
+//! a column of a table.
+//! 
+//! Foreign key relationships are represented by [`dds::Polyline`]s with tooltips and associated [`dds::Label`]s.
 //!
 //! ## Preview
 //!
 //! ![Database Diagram](https://raw.githubusercontent.com/Xiphoseer/sysdiagram/ad596ad4e17bf25e6e004a212c1d12d03c97f28e/res/dv3w7c1.gif)
+//!
+//! [\[MS-OFORMS\]]: https://learn.microsoft.com/en-us/openspecs/office_file_formats/ms-oforms
+//! [\[MS-OLEDS\]]: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-oleds
+//! [\[MS-CFB\]]: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-cfb
+//! [ProgID]: https://learn.microsoft.com/en-us/windows/win32/com/-progid--key
+//! [VBA UserForm]: https://learn.microsoft.com/en-us/office/vba/excel/concepts/controls-dialogboxes-forms/create-a-user-form
+//! [`dts-designer-1.0`]: https://learn.microsoft.com/en-us/openspecs/sql_data_portability/ms-dtsx/a7d84cd1-4aca-433a-b450-58b331fca519
 
 mod core;
 pub use core::*;
