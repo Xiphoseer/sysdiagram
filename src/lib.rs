@@ -38,7 +38,7 @@
 //! The compound object also has a `DSREF-SCHEMA-CONTENTS` stream, which is a persisted
 //! [Data Source Reference Object (DSRef)][`dsref`] and probably makes it be a `CF_DSREF`
 //! clipboard object as well. A DSRef is a Visual Studio abstraction that makes it possible
-//! to drag & drop "data objects" between tools & hierarchies. The DSRef has in a sysdiagram has:
+//! to drag & drop "data objects" between tools & hierarchies. The DSRef in a sysdiagram has:
 //! - a root note of type `DATABASE` (name is a connection string)
 //! - with one child node of type `SCHEMADIAGRAM` (name is the diagram name)
 //! - one child node of type `TABLE` per table in the diagram (name is table name, owner is schema)
