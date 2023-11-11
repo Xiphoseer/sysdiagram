@@ -357,5 +357,5 @@ fn size_himetric_to_mm(size: Size) -> (f32, f32) {
 
 pub fn main() -> Result<(), anyhow::Error> {
     let opts: Options = argh::from_env();
-    load_database(&opts).with_context(|| "Loading database failed!")
+    load_database(&opts).with_context(|| "Loading sysdiagram failed!")
 }
