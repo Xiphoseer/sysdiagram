@@ -11,9 +11,9 @@ use sysdiagram::dsref::DSRefSchemaContents;
 use sysdiagram::{get_settings, Control, Error, SiteInfo, SysDiagramFile};
 
 #[derive(argh::FromArgs)]
-/// parse a sysdiagram from a FDB file
+/// parse a SSMS database diagram (sysdiagram)
 struct Options {
-    /// path to the FDB file
+    /// path to the sysdiagram blob
     #[argh(positional)]
     file: PathBuf,
 
@@ -42,11 +42,11 @@ struct Options {
     streams: bool,
 
     #[argh(switch)]
-    /// print settings
+    /// print connection string fields
     settings: bool,
 
     #[argh(switch)]
-    /// print dsref
+    /// print DSRef
     dsref: bool,
 
     #[argh(switch)]
@@ -54,11 +54,11 @@ struct Options {
     tables: bool,
 
     #[argh(switch)]
-    /// print label
+    /// print labels
     labels: bool,
 
     #[argh(switch)]
-    /// print \0CompObj info
+    /// print \1CompObj info
     comp_obj: bool,
 
     #[argh(switch)]
