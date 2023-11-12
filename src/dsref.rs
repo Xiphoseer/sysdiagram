@@ -62,11 +62,14 @@
 //! [`GetProperty`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefconsumer.getproperty
 //! [`SetProperty`]: https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.data.services.supportentities.interop.idsrefprovider.setproperty
 
-use crate::parse_u32_bytes_wstring_nt;
-use ms_oforms::common::{parse_guid, VarType};
+use crate::{
+    dtyp::{parse_variant, Variant},
+    parse_u32_bytes_wstring_nt,
+};
+use ms_oforms::common::parse_guid;
 use nom::{
     bytes::complete::tag,
-    combinator::{cond, map, map_opt},
+    combinator::{cond, map_opt},
     error::{ContextError, FromExternalError, ParseError},
     number::complete::{le_u16, le_u32, le_u64},
     IResult,
@@ -240,12 +243,6 @@ impl DSRefSchemaContents {
     }
 }
 
-#[derive(Debug, Clone)]
-#[non_exhaustive]
-pub enum Variant {
-    BStr(String),
-}
-
 fn parse_dsref_properties<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], BTreeMap<Uuid, Variant>, E>
 where
     E: ParseError<&'a [u8]>,
@@ -258,11 +255,7 @@ where
     for _index in 0..prop_count {
         let input = _i;
         let (input, property) = parse_guid(input)?;
-        let (input, vt) = map_opt(le_u16, VarType::from_bits)(input)?;
-        let (input, value) = match vt {
-            VarType::BSTR => map(parse_u32_bytes_wstring_nt, Variant::BStr)(input),
-            _ => todo!(),
-        }?;
+        let (input, value) = parse_variant(input)?;
         prop_map.insert(property, value);
         _i = input;
     }

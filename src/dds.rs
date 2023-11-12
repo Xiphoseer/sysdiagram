@@ -18,19 +18,23 @@ use ms_oforms::properties::{
     Position, Size,
 };
 use nom::{
-    bytes::complete::take,
+    bytes::complete::{tag, take},
     combinator::{map, map_opt, rest},
     error::{FromExternalError, ParseError},
     multi::{count, length_count},
-    number::complete::{le_u16, le_u32, le_u8},
+    number::complete::{le_i32, le_u16, le_u32, le_u8},
+    sequence::tuple,
     IResult,
 };
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::BTreeMap};
 use uuid::{uuid, Uuid};
 
-use crate::parse_u16_wstring;
+use crate::{
+    dtyp::{parse_variant, Variant},
+    parse_u16_wstring, parse_u32_bytes_wstring_nt,
+};
 
 /// Microsoft DT PolyLine Control 2 (ProgID `MSDTPolylineControl.2`)
 pub const CLSID_POLYLINE: Uuid = uuid!("d24d4453-1f01-11d1-8e63-006097d2df48");
@@ -228,4 +232,73 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
             _rest,
         },
     ))
+}
+
+#[derive(Debug, PartialEq)]
+pub struct DdsStreamCtrlHead {
+    pub id1: i32, // logical?
+    pub id2: i32, // physical?
+    pub parent_id: i32,
+    pub len: u32,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct DdsStreamCtrl {
+    pub head: DdsStreamCtrlHead,
+    pub(crate) _a1: BString,
+    pub properties: BTreeMap<String, Variant>,
+}
+
+pub fn parse_dds_stream_ctrl_head(input: &[u8]) -> IResult<&[u8], DdsStreamCtrlHead> {
+    let (input, (id1, id2, parent_id, len)) = tuple((le_i32, le_i32, le_i32, le_u32))(input)?;
+    Ok((
+        input,
+        DdsStreamCtrlHead {
+            id1,
+            id2,
+            parent_id,
+            len,
+        },
+    ))
+}
+
+pub fn parse_dds_stream_ctrl(input: &[u8]) -> IResult<&[u8], DdsStreamCtrl> {
+    let (input, head) = parse_dds_stream_ctrl_head(input)?;
+    let (input, _a1) = map(take(head.len), BString::from)(input)?;
+    let (input, _a2) = take(8usize)(input)?;
+    let (input, _a3) = le_u32(input)?;
+
+    // This is a weird but necessary case for labels
+    let (input, _) = if head.parent_id > 0 {
+        le_u8(input)?
+    } else {
+        (input, 0)
+    };
+
+    let (input, properties) = parse_properties(input)?;
+
+    Ok((
+        input,
+        DdsStreamCtrl {
+            head,
+            _a1,
+            properties,
+        },
+    ))
+}
+
+fn parse_properties(input: &[u8]) -> IResult<&[u8], BTreeMap<String, Variant>> {
+    let mut properties = BTreeMap::new();
+    let (input, prop_count) = le_u16(input)?;
+    let mut _i = input;
+    for _ in 0..prop_count {
+        let input = _i;
+        let (input, key) = parse_u32_bytes_wstring_nt(input)?;
+        let (input, _) = tag([0x01, 0, 0, 0])(input)?;
+        let (input, value) = parse_variant(input)?;
+        properties.insert(key, value);
+        _i = input;
+    }
+    let input = _i;
+    Ok((input, properties))
 }

@@ -1,3 +1,4 @@
 target
 *.csv
 lu*.sysdiagram
+lu*.bin

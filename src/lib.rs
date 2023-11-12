@@ -77,6 +77,7 @@ use std::{
     io::{Read, Seek},
     ops::DerefMut,
 };
+mod dtyp;
 mod error;
 pub use error::*;
 pub mod mdtdb;
@@ -148,7 +149,6 @@ impl<T: Read + Seek> SysDiagramFile<T> {
         eprintln!("Parsing Objects");
 
         let mut iter = form.site_iter();
-
         let mut controls = Vec::new();
 
         let mut buf = Vec::<u8>::new();

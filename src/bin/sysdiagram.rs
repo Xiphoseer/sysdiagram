@@ -1,12 +1,14 @@
 use anyhow::Context;
+use bstr::BStr;
 use mapr::Mmap;
 use ms_oforms::controls::user_form::FormControl;
 use ms_oforms::properties::color::{OleColor, RgbColor};
 use ms_oforms::properties::{Position, Size};
-use std::io::Cursor;
+use nom::Finish;
+use std::io::{Cursor, Read};
 use std::path::PathBuf;
 use std::{fs::File, time::UNIX_EPOCH};
-use sysdiagram::dds::DdsPolylineEndType;
+use sysdiagram::dds::{parse_dds_stream_ctrl, DdsPolylineEndType};
 use sysdiagram::dsref::DSRefSchemaContents;
 use sysdiagram::{get_settings, Control, Error, SiteInfo, SysDiagramFile};
 
@@ -32,6 +34,10 @@ struct Options {
     #[argh(switch)]
     /// print form
     form: bool,
+
+    #[argh(switch)]
+    /// print \3DdsStream
+    dds_stream: bool,
 
     #[argh(switch)]
     /// print form size
@@ -185,6 +191,23 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
             }
         }
     }
+
+    if opts.dds_stream {
+        eprintln!("Parsing DdsStream");
+
+        let mut dds_stream = reader.open_stream("\x03DdsStream")?;
+        let mut buf = Vec::with_capacity(dds_stream.len() as usize);
+        dds_stream.read_to_end(&mut buf)?;
+
+        let mut input = &buf[110..];
+        for _i in 0..controls.len() {
+            let (_i, ctrl) = parse_dds_stream_ctrl(input).finish().unwrap();
+            println!("{:?}", ctrl);
+            input = _i;
+        }
+        println!("{:?}", BStr::new(input))
+    }
+
     Ok(())
 }
 
