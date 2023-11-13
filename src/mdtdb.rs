@@ -96,6 +96,9 @@ pub enum TableView {
     ColumnNames = 1,
     Keys = 2,
     NameOnly = 3,
+    /// Column Name, Data Type, and Allow Nulls.
+    ///
+    /// See: <https://learn.microsoft.com/en-us/sql/ssms/visual-db-tools/walkthrough-adding-and-changing-a-database-diagram?view=sql-server-ver16>
     Standard = 4,
 }
 
