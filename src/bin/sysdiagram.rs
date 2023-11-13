@@ -8,7 +8,7 @@ use nom::Finish;
 use std::io::{Cursor, Read};
 use std::path::PathBuf;
 use std::{fs::File, time::UNIX_EPOCH};
-use sysdiagram::dds::{parse_dds_stream_ctrl, DdsPolylineEndType};
+use sysdiagram::dds::{parse_dds_stream_ctrl, parse_dds_stream_header, DdsPolylineEndType};
 use sysdiagram::dsref::DSRefSchemaContents;
 use sysdiagram::{get_settings, Control, Error, SiteInfo, SysDiagramFile};
 
@@ -199,7 +199,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
         let mut buf = Vec::with_capacity(dds_stream.len() as usize);
         dds_stream.read_to_end(&mut buf)?;
 
-        let mut input = &buf[110..];
+        let input = &buf[..];
+        let (mut input, header) = parse_dds_stream_header(input).unwrap();
+        println!("{:?}", header);
         for _i in 0..controls.len() {
             let (_i, ctrl) = parse_dds_stream_ctrl(input).finish().unwrap();
             println!("{:?}", ctrl);

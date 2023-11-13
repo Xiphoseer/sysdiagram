@@ -23,7 +23,7 @@ use nom::{
     error::{FromExternalError, ParseError},
     multi::{count, length_count},
     number::complete::{le_i32, le_u16, le_u32, le_u8},
-    sequence::tuple,
+    sequence::{pair, tuple},
     IResult,
 };
 use num_derive::FromPrimitive;
@@ -234,7 +234,7 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
     ))
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DdsStreamCtrlHead {
     pub id1: i32, // logical?
     pub id2: i32, // physical?
@@ -242,7 +242,18 @@ pub struct DdsStreamCtrlHead {
     pub len: u32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct DdsStreamHeader {
+    pub(crate) _a1: (i32, i32),
+    pub properties: BTreeMap<String, Variant>,
+    pub flags: u32,
+    pub(crate) _a7: (i32, i32),
+    pub(crate) _a8: (i32, i32),
+    pub(crate) _a11: u32,
+    pub(crate) _a12: BString,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DdsStreamCtrl {
     pub head: DdsStreamCtrlHead,
     pub(crate) _a1: BString,
@@ -258,6 +269,29 @@ pub fn parse_dds_stream_ctrl_head(input: &[u8]) -> IResult<&[u8], DdsStreamCtrlH
             id2,
             parent_id,
             len,
+        },
+    ))
+}
+
+pub fn parse_dds_stream_header(input: &[u8]) -> IResult<&[u8], DdsStreamHeader> {
+    let (input, _) = tag([12, 0, 0, 0])(input)?;
+    let (input, _a1) = pair(le_i32, le_i32)(input)?;
+    let (input, properties) = parse_properties(input)?;
+    let (input, flags) = le_u32(input)?;
+    let (input, _a7) = pair(le_i32, le_i32)(input)?;
+    let (input, _a8) = pair(le_i32, le_i32)(input)?;
+    let (input, _a11) = le_u32(input)?;
+    let (input, _a12) = map(take(22usize), BString::from)(input)?;
+    Ok((
+        input,
+        DdsStreamHeader {
+            _a1,
+            properties,
+            flags,
+            _a7,
+            _a8,
+            _a11,
+            _a12,
         },
     ))
 }
