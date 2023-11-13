@@ -78,6 +78,7 @@ use std::{
     ops::DerefMut,
 };
 mod dtyp;
+pub use dtyp::*;
 mod error;
 use dds::DdsStream;
 pub use error::*;
