@@ -57,19 +57,27 @@ impl<I: InputLength> From<nom::Err<VerboseError<I>>> for Error {
         match e {
             // Need to translate the error here, as this lives longer than the input
             nom::Err::Incomplete(_) => Error::Incomplete,
-            nom::Err::Error(e) => Error::ParseErrorVerbose(
-                e.errors
-                    .into_iter()
-                    .map(|e| (e.1, e.0.input_len()))
-                    .collect(),
-            ),
-            nom::Err::Failure(e) => Error::ParseFailureVerbose(
-                e.errors
-                    .into_iter()
-                    .map(|e| (e.1, e.0.input_len()))
-                    .collect(),
-            ),
+            nom::Err::Error(e) => Self::from(e),
+            nom::Err::Failure(e) => Self::from(e),
         }
+    }
+}
+
+impl<I: InputLength> From<VerboseError<I>> for Error {
+    fn from(value: VerboseError<I>) -> Self {
+        Error::ParseFailureVerbose(
+            value
+                .errors
+                .into_iter()
+                .map(|e| (e.1, e.0.input_len()))
+                .collect(),
+        )
+    }
+}
+
+impl<I: InputLength> From<nom::error::Error<I>> for Error {
+    fn from(e: nom::error::Error<I>) -> Self {
+        Error::ParseFailure(e.code, e.input.input_len())
     }
 }
 

@@ -235,11 +235,10 @@ pub fn parse_polyline(input: &[u8]) -> IResult<&[u8], Polyline> {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct DdsStreamCtrlHead {
-    pub id1: i32, // logical?
-    pub id2: i32, // physical?
-    pub parent_id: i32,
-    pub len: u32,
+pub struct DdsStream {
+    pub header: DdsStreamHeader,
+    pub controls: Vec<DdsStreamCtrl>,
+    pub numbers: Vec<u32>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -255,20 +254,24 @@ pub struct DdsStreamHeader {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DdsStreamCtrl {
-    pub head: DdsStreamCtrlHead,
+    pub id1: i32, // logical?
+    pub id2: i32, // physical?
+    pub parent_id: i32,
+    pub len: u32,
     pub(crate) _a1: BString,
     pub properties: BTreeMap<String, Variant>,
 }
 
-pub fn parse_dds_stream_ctrl_head(input: &[u8]) -> IResult<&[u8], DdsStreamCtrlHead> {
-    let (input, (id1, id2, parent_id, len)) = tuple((le_i32, le_i32, le_i32, le_u32))(input)?;
+pub fn parse_dds_stream(input: &[u8], ctrl_count: usize) -> IResult<&[u8], DdsStream> {
+    let (input, header) = parse_dds_stream_header(input).unwrap();
+    let (input, controls) = count(parse_dds_stream_ctrl, ctrl_count)(input)?;
+    let (input, numbers) = parse_dds_stream_trailer(input)?;
     Ok((
         input,
-        DdsStreamCtrlHead {
-            id1,
-            id2,
-            parent_id,
-            len,
+        DdsStream {
+            header,
+            controls,
+            numbers,
         },
     ))
 }
@@ -296,14 +299,18 @@ pub fn parse_dds_stream_header(input: &[u8]) -> IResult<&[u8], DdsStreamHeader> 
     ))
 }
 
+pub fn parse_dds_stream_trailer(input: &[u8]) -> IResult<&[u8], Vec<u32>> {
+    length_count(le_u32, le_u32)(input)
+}
+
 pub fn parse_dds_stream_ctrl(input: &[u8]) -> IResult<&[u8], DdsStreamCtrl> {
-    let (input, head) = parse_dds_stream_ctrl_head(input)?;
-    let (input, _a1) = map(take(head.len), BString::from)(input)?;
+    let (input, (id1, id2, parent_id, len)) = tuple((le_i32, le_i32, le_i32, le_u32))(input)?;
+    let (input, _a1) = map(take(len), BString::from)(input)?;
     let (input, _a2) = take(8usize)(input)?;
     let (input, _a3) = le_u32(input)?;
 
     // This is a weird but necessary case for labels
-    let (input, _) = if head.parent_id > 0 {
+    let (input, _) = if parent_id > 0 {
         le_u8(input)?
     } else {
         (input, 0)
@@ -314,7 +321,10 @@ pub fn parse_dds_stream_ctrl(input: &[u8]) -> IResult<&[u8], DdsStreamCtrl> {
     Ok((
         input,
         DdsStreamCtrl {
-            head,
+            id1,
+            id2,
+            parent_id,
+            len,
             _a1,
             properties,
         },

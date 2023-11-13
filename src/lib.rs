@@ -79,6 +79,7 @@ use std::{
 };
 mod dtyp;
 mod error;
+use dds::DdsStream;
 pub use error::*;
 pub mod mdtdb;
 mod parser;
@@ -86,7 +87,7 @@ pub use mdtdb::SchGrid;
 use ms_oforms::{
     controls::user_form::FormControl, properties::FormEmbeddedActiveXControl, OFormsFile,
 };
-use nom::error::VerboseError;
+use nom::{error::VerboseError, Finish};
 pub use parser::*;
 mod connection_string;
 pub mod dds;
@@ -95,7 +96,7 @@ pub use connection_string::*;
 use dsref::{parse_dsref_schema_contents, DSRefSchemaContents};
 
 use crate::{
-    dds::{parse_label, parse_polyline, CLSID_DDSLABEL, CLSID_POLYLINE},
+    dds::{parse_dds_stream, parse_label, parse_polyline, CLSID_DDSLABEL, CLSID_POLYLINE},
     mdtdb::{parse_sch_grid, CLSID_SCHGRID},
 };
 
@@ -110,7 +111,7 @@ pub struct SysDiagramFile<T> {
     inner: OFormsFile<T>,
 }
 
-type SchemaForm = (FormControl, Vec<(SiteInfo, Control)>);
+type SchemaForm = (FormControl, Vec<(SiteInfo, Control)>, DdsStream);
 
 impl<T: Read + Seek> SysDiagramFile<T> {
     pub fn open(inner: T) -> std::io::Result<Self> {
@@ -199,7 +200,14 @@ impl<T: Read + Seek> SysDiagramFile<T> {
             ))
         }
         let form_control = form.into_form_control();
-        Ok((form_control, controls))
+
+        let mut dds_stream = self.open_stream("\x03DdsStream")?;
+        let mut buf = Vec::with_capacity(dds_stream.len() as usize);
+        dds_stream.read_to_end(&mut buf)?;
+
+        let (_, diagram) = parse_dds_stream(&buf, controls.len()).finish()?;
+
+        Ok((form_control, controls, diagram))
     }
 }
 
