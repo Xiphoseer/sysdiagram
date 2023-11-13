@@ -169,6 +169,9 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
     }) {
         println!();
         println!("==> {:?}", site);
+        if let Some(dds_ctrl) = diagram.controls.iter().find(|c| c.id1 == site.id) {
+            println!("{:?}", dds_ctrl);
+        }
         match control {
             Control::SchGrid(sch_grid) => {
                 println!("{:?}", sch_grid.extent);
