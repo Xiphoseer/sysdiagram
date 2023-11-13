@@ -34,7 +34,7 @@
 //! in a unspecified `xmlns:dwd="http://schemas.microsoft.com/DataWarehouse/Designer/1.0"` namespace to store layout
 //! information.
 //!
-//! Most importantly though, it was used in the Visual Studio 5.0 and 6.0 for the UserForm
+//! Most importantly though, it was used in Visual Studio 5.0 and 6.0 for the UserForm
 //! designer, which also found its way into Office via the [VBA UserForm]s
 //! and their [Designer Storages](https://learn.microsoft.com/en-us/openspecs/office_file_formats/ms-ovba/f614ae64-1b3d-47be-a166-0e10b8230026).
 //!
@@ -58,6 +58,16 @@
 //! a column of a table.
 //!
 //! Foreign key relationships are represented by [`dds::Polyline`]s with tooltips and associated [`dds::Label`]s.
+//!
+//! ## Other streams
+//!
+//! - There is a `\3DdsStream` that has string-to-variant properties dictionary and optionally a bit
+//!   of binary data for each control, as well as a a global properties dictionary. The global dict
+//!   has one boolean field `sch_labels_visible` and all SchGrid controls have a property `ActiveTableViewMode`
+//!   (string type but contains a number) and properties `TableViewMode:0` through `TableViewMode:4` with
+//!   a string of comma separated numbers.
+//! - There are two streams `Schema UDV Default` and `Schema UDV Default Post V6` where `UDV` might
+//!   stand for user-defined value/variable/view in the SQL Server context.
 //!
 //! ## Preview
 //!
